@@ -1,0 +1,22 @@
+# Secrets: never commit API keys
+.env
+code/.env
+
+# Python / uv
+__pycache__/
+*.pyc
+.venv/
+code/.venv/
+
+# Large data: rebuilt locally from data/scripts, never committed
+repos/
+dataset/
+
+# Run outputs: share results through the shared drive or a results/ summary instead
+code/logs/
+logs/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

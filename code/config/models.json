@@ -1,0 +1,25 @@
+{
+  "models": [
+    {
+      "id": "gpt-4o",
+      "backend": "openai_compatible",
+      "model": "gpt-4o",
+      "base_url_env": "OPENAI_BASE_URL",
+      "api_key_env": "OPENAI_API_KEY"
+    },
+    {
+      "id": "claude-sonnet",
+      "backend": "anthropic",
+      "model": "claude-sonnet-4-5",
+      "base_url_env": "ANTHROPIC_BASE_URL",
+      "api_key_env": "ANTHROPIC_API_KEY"
+    },
+    {
+      "id": "gemini-pro",
+      "backend": "gemini",
+      "model": "gemini-pro",
+      "base_url_env": null,
+      "api_key_env": "GEMINI_API_KEY"
+    }
+  ]
+}
