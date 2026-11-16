@@ -1,0 +1,186 @@
+\documentclass[sigconf,nonacm]{acmart}
+
+%%
+%% \BibTeX command to typeset BibTeX logo in the docs
+\AtBeginDocument{%
+  \providecommand\BibTeX{{%
+    Bib\TeX}}}
+
+\begin{document}
+
+\title{VERA-DREA: Evidence-Guided Self-Correction for Repository-Level Vulnerability Detection}
+
+\author{Raj Kangriwala}
+\email{rkangriwala@umass.edu}
+\affiliation{%
+  \institution{University of Massachusetts Amherst}
+  \department{ECE371H: Security Engineering}
+  \city{Amherst}
+  \country{USA}
+}
+
+\author{Saksham Verma}
+\email{sakshamverma@umass.edu}
+\affiliation{%
+  \institution{University of Massachusetts Amherst}
+  \department{ECE371H: Security Engineering}
+  \city{Amherst}
+  \country{USA}
+}
+
+\author{Renan Solak}
+\email{rsolak@umass.edu}
+\affiliation{%
+  \institution{University of Massachusetts Amherst}
+  \department{ECE371H: Security Engineering}
+  \city{Amherst}
+  \country{USA}
+}
+
+\author{Tamanna Chandak}
+\email{tchandak@umass.edu}
+\affiliation{%
+  \institution{University of Massachusetts Amherst}
+  \department{ECE371H: Security Engineering}
+  \city{Amherst}
+  \country{USA}
+}
+
+
+\begin{abstract}
+Large language models (LLMs) have shown promise in automated software vulnerability detection, but their assessments may rely on incorrect or unsupported reasoning, even when the final vulnerability classification is correct. DREA addresses repository-level vulnerability detection through hypothesis-driven code exploration, while VERA introduces structured auditing techniques to identify flaws in LLM-generated security reasoning. We propose VERA-DREA, a framework that integrates VERA-inspired reasoning into DREA's repository exploration. When the verifier identifies unsupported claims or missing evidence, the system directs the Explorer to investigate relevant code paths, allowing the Planner to reconsider and potentially correct its original vulnerability reasoning. We will evaluate whether this feedback mechanism improves vulnerability detection accuracy and reasoning reliability compared with standard DREA and unguided self-revision, while measuring false-positive regressions and additional computational costs. Our goal is to investigate whether structured, evidence-guided feedback can enable more reliable self-correction in repository-level vulnerability detection.
+\end{abstract}
+
+\maketitle
+
+\section{Introduction and Motivation}
+Large language models are increasingly being used to automate software vulnerability detection. However, vulnerabilities often depend on interactions between multiple functions and files, making them difficult to identify through isolated code analysis. Recent frameworks such as DREA have addressed this challenge through hypothesis-driven repository exploration, enabling LLMs to retrieve relevant source code and investigate potential security weaknesses. Despite improvements in detection accuracy, DREA's researchers identified a persistent problem known as \emph{Lucky Hits}, in which an LLM correctly identifies vulnerable code but provides an incorrect explanation of the underlying vulnerability.
+
+
+These reasoning errors raise concerns about the reliability of LLM-based vulnerability detection, particularly when developers depend on accurate explanations to identify and resolve security flaws. While VERA introduces structured verification techniques for detecting inconsistencies in LLM-generated security reasoning, identifying incorrect reasoning alone does not guarantee that the underlying vulnerability assessment can be corrected. This project proposes integrating VERA-inspired verification with DREA's repository exploration to create an evidence-guided feedback mechanism. By identifying unsupported claims, retrieving additional code evidence, and revising vulnerability hypotheses, we aim to investigate whether structured verification can improve both reasoning reliability and vulnerability detection accuracy without introducing excessive computational overhead.
+
+\section{Background and Related Work}
+
+Repository-level vulnerability detection and automated verification of LLM-generated reasoning are rapidly developing research areas. This project builds upon recent advances in both fields:
+
+\textbf{Repository-Level Detection:} Guo et al. introduced RepoAudit \cite{repoaudit}, an LLM-based framework that combines repository exploration with validation of data-flow relationships and execution paths. More recently, DREA \cite{drea} introduced a separation between vulnerability reasoning and code exploration through specialized Planner and Explorer agents. Although DREA improves detection accuracy, its authors identify persistent reasoning errors termed ``Lucky Hits.''
+
+\textbf{Structured Reasoning Verification:} VERA \cite{vera} introduces Structured Reasoning Records and systematic auditing techniques to detect unsupported assumptions, fabricated operations, and inconsistencies in vulnerability explanations. However, its implementation primarily targets C/C++ memory and resource-lifecycle vulnerabilities rather than the broader Python vulnerabilities evaluated by DREA.
+
+\textbf{Iterative Self-Correction:} Self-Refine \cite{selfrefine} demonstrates how LLMs can iteratively improve their responses using generated feedback. However, feedback without independently verified evidence may perpetuate incorrect assumptions.
+
+\textbf{Vulnerability Benchmarks:} RepoPairBench \cite{drea} evaluates vulnerability detection using paired vulnerable and patched Python repositories, while JITVul \cite{jitvul} provides a broader benchmark of real-world repository vulnerabilities.
+
+This project connects these approaches by investigating whether structured, evidence-grounded verification can guide DREA's repository exploration and improve vulnerability assessments beyond conventional self-revision.
+
+\section{Proposed Technical Approach}
+
+The proposed project extends DREA's existing repository-level vulnerability detection framework with a VERA-inspired verification component. Rather than reproducing VERA's C/C++ auditing system, we will adapt its structured reasoning principles to a limited subset of Python vulnerabilities.
+
+\subsection{Architecture and Design}
+
+The system will retain DREA's Planner and Explorer agents. The Planner generates vulnerability hypotheses and supporting explanations, while the Explorer retrieves relevant source code. We will introduce a Verifier that converts these explanations into structured claims containing vulnerability hypotheses, source references, and assumptions about program behavior.
+
+The Verifier will examine these claims using source-grounding, evidence-completeness, and consistency checks. Unsupported or contradictory claims will generate targeted requests for additional repository evidence. The Explorer will retrieve the requested code, allowing the Planner to reconsider its initial assessment. To limit computational overhead and reduce the risk of incorrect revisions, the initial implementation will use a single verification-and-revision cycle while preserving the original vulnerability verdict.
+
+
+\subsection{Methodology Workflow}
+The proposed implementation follows five stages, illustrated in the pipeline below:
+
+\vspace{0.3cm}
+\noindent\framebox{\parbox{0.95\columnwidth}{
+\centering
+\textbf{VERA-DREA System Pipeline} \\
+\vspace{0.2cm}
+1. \textit{Initial Detection}: DREA Planner and Explorer \\
+$\downarrow$ \\
+2. \textit{Reasoning Extraction}: Structured Claims and Evidence \\
+$\downarrow$ \\
+3. \textit{Verification}: Source-Grounding and Consistency Checks \\
+$\downarrow$ \\
+4. \textit{Guided Revision}: Targeted Exploration and Reassessment \\
+$\downarrow$ \\
+5. \textit{Evaluation}: Classification, Reasoning, and Cost Analysis
+}}
+\vspace{0.3cm}
+
+\section{Evaluation Plan}
+We will evaluate VERA-DREA on selected vulnerable and patched examples from RepoPairBench, comparing the same initial assessments under consistent model settings and comparable inference budgets.
+
+\textbf{Experiments:} Three configurations will be compared: standard DREA, DREA with unguided self-revision, and VERA-DREA with verifier-guided exploration and revision.
+
+\textbf{Performance Metrics:}
+\begin{itemize}
+    \item \textit{Detection Accuracy and Pair-Correctness}: Correct classification of vulnerable and patched repositories.
+    \item \textit{Reasoning Reliability}: Correctness of vulnerability explanations, including the frequency of ``Lucky Hits.''
+    \item \textit{Corrections and Regressions}: Incorrect initial verdicts corrected and correct initial verdicts made incorrect after revision.
+    \item \textit{Computational Overhead}: Additional model calls, token usage, and execution time.
+\end{itemize}
+
+\textbf{Success Criteria:} The project will deliver a reproducible comparison demonstrating whether verifier-guided feedback improves detection or reasoning reliability, and at what cost, without presupposing a positive result.
+
+\section{Timeline and Milestones}
+The project will follow a five-week development schedule, prioritizing a functional prototype and measurable experimental results:
+
+\begin{itemize}
+    \item \textbf{Week 1}: Set up DREA, reproduce baseline results on a subset of RepoPairBench, and select an initial Python vulnerability category.
+
+    \item \textbf{Week 2}: Develop structured reasoning records and implement initial source-grounding, evidence-completeness, and consistency checks.
+
+    \item \textbf{Week 3}: Complete and unit-test the standalone Verifier, then begin integrating it with DREA's Planner and Explorer.
+
+    \item \textbf{Week 4}: Complete the verification-guided feedback loop, including targeted evidence retrieval and bounded hypothesis revision. Begin comparative experiments against standard DREA and unguided self-revision.
+
+    \item \textbf{Week 5}: Finalize experiments, analyze detection accuracy, reasoning correctness, regressions, and computational overhead, and prepare the final technical report.
+\end{itemize}
+
+\section{Expected Outcomes}
+The project will produce a functional VERA-DREA prototype integrating a structured reasoning Verifier with DREA's existing Planner and Explorer agents. Additional deliverables will include a Python-based evaluation framework comparing standard DREA, unguided self-revision, and verification-guided exploration on selected repository vulnerabilities. The final technical report will analyze vulnerability detection accuracy, reasoning reliability, harmful regressions, and computational overhead. These results will help determine whether structured, evidence-guided feedback provides a practical approach to improving LLM-based vulnerability detection.
+
+
+\begin{thebibliography}{9}
+
+\bibitem{drea}
+M. Sun and G. Meng. 2026.
+\newblock DREA: Decoupled Reasoning and Exploration Agents for
+Repository-Level Vulnerability Detection.
+\newblock \emph{arXiv preprint arXiv:2607.13439}.
+\newblock \url{https://arxiv.org/abs/2607.13439}.
+
+\bibitem{vera}
+B. C. Hu, K. Ahir, R. Ni, and L. Jia. 2026.
+\newblock Correct Verdicts, Flawed Reasoning: Structured
+Auditing of LLM-based Vulnerability Reasoning.
+\newblock \emph{arXiv preprint arXiv:2610.06366}.
+\newblock \url{https://arxiv.org/abs/2610.06366}.
+
+\bibitem{repoaudit}
+J. Guo, C. Wang, X. Xu, Z. Su, and X. Zhang. 2025.
+\newblock RepoAudit: An Autonomous LLM-Agent for
+Repository-Level Code Auditing.
+\newblock In \emph{Proceedings of the 42nd International
+Conference on Machine Learning (ICML)}, PMLR 267,
+21083--21100.
+\newblock \url{https://proceedings.mlr.press/v267/guo25n.html}.
+
+\bibitem{selfrefine}
+A. Madaan et al. 2023.
+\newblock Self-Refine: Iterative Refinement with Self-Feedback.
+\newblock In \emph{Advances in Neural Information Processing
+Systems 36 (NeurIPS 2023)}.
+\newblock \url{https://arxiv.org/abs/2303.17651}.
+
+\bibitem{jitvul}
+A. Yildiz, S. G. Teo, Y. Lou, Y. Feng, C. Wang,
+and D. M. Divakaran. 2025.
+\newblock Benchmarking LLMs and LLM-based Agents in
+Practical Vulnerability Detection for Code Repositories.
+\newblock In \emph{Proceedings of the 63rd Annual Meeting of
+the Association for Computational Linguistics (ACL)},
+30848--30865.
+\newblock \url{https://doi.org/10.18653/v1/2025.acl-long.1490}.
+
+\end{thebibliography}
+
+
+\end{document}
