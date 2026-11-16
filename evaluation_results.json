@@ -4,29 +4,29 @@
       "correct_preds": 4,
       "total_preds": 8,
       "pair_correct": 0,
-      "false_positives": 2,
+      "false_positives": 4,
       "total_negatives": 4,
-      "true_positives": 2,
-      "lucky_hits": 1,
+      "true_positives": 4,
+      "lucky_hits": 4,
       "corrected_from_base": 0,
       "regressed_from_base": 0,
-      "tokens": 3270,
+      "tokens": 3577,
       "calls": 8,
-      "latency": 0.40166807174682617
+      "latency": 165.61739373207092
     },
     "self_refine": {
-      "correct_preds": 4,
+      "correct_preds": 6,
       "total_preds": 8,
-      "pair_correct": 0,
+      "pair_correct": 2,
       "false_positives": 2,
       "total_negatives": 4,
-      "true_positives": 2,
-      "lucky_hits": 1,
-      "corrected_from_base": 0,
+      "true_positives": 4,
+      "lucky_hits": 4,
+      "corrected_from_base": 2,
       "regressed_from_base": 0,
-      "tokens": 6335,
+      "tokens": 8607,
       "calls": 16,
-      "latency": 0.8036115169525146
+      "latency": 389.49761295318604
     },
     "vera_drea": {
       "correct_preds": 8,
@@ -38,9 +38,9 @@
       "lucky_hits": 0,
       "corrected_from_base": 4,
       "regressed_from_base": 0,
-      "tokens": 9550,
+      "tokens": 11513,
       "calls": 24,
-      "latency": 1.2054576873779297
+      "latency": 400.1674039363861
     }
   },
   "details": [
@@ -49,41 +49,47 @@
       "vuln_results": {
         "baseline_drea": {
           "srr": {
-            "verdict": "SAFE",
-            "cwe": "NONE",
-            "root_cause_function": "sanitize_account_id",
+            "verdict": "VULNERABLE",
+            "cwe": "CWE-89",
+            "root_cause_function": "get_profile_Route",
             "claims": [
               {
                 "function": "get_profile_Route",
-                "claim": "Calls sanitize_account_id before database lookup."
+                "claim": "The function `get_profile_Route` does not sanitize the `account_id` before using it in the `execute_user_lookup` function, which could lead to SQL injection if the `account_id` is not properly sanitized."
               }
             ],
             "assumptions": [
               {
                 "target_function": "sanitize_account_id",
-                "assumed_behavior": "Properly sanitizes SQL injection payloads"
-              },
-              {
-                "target_function": "execute_user_lookup",
-                "assumed_behavior": "Executes query using sanitized input"
+                "assumed_behavior": "The `sanitize_account_id` function is assumed to sanitize the `account_id` by removing any potentially harmful characters."
               }
             ]
           },
-          "tokens": 410,
+          "tokens": 425,
           "calls": 1,
-          "latency": 0.05018448829650879
+          "latency": 37.38351583480835
         },
         "self_refine": {
           "srr": {
-            "verdict": "SAFE",
-            "cwe": "NONE",
-            "root_cause_function": "sanitize_account_id",
-            "claims": [],
-            "assumptions": []
+            "verdict": "VULNERABLE",
+            "cwe": "CWE-89",
+            "root_cause_function": "get_profile_Route",
+            "claims": [
+              {
+                "function": "get_profile_Route",
+                "claim": "The function `get_profile_Route` does not sanitize the `account_id` before using it in the `execute_user_lookup` function, which could lead to SQL injection if the `account_id` is not properly sanitized."
+              }
+            ],
+            "assumptions": [
+              {
+                "target_function": "sanitize_account_id",
+                "assumed_behavior": "The `sanitize_account_id` function is assumed to sanitize the `account_id` by removing any potentially harmful characters."
+              }
+            ]
           },
-          "tokens": 790,
+          "tokens": 1008,
           "calls": 2,
-          "latency": 0.10039067268371582
+          "latency": 63.173397064208984
         },
         "vera_drea": {
           "srr": {
@@ -92,73 +98,84 @@
             "root_cause_function": "execute_user_lookup",
             "claims": [
               {
-                "function": "execute_user_lookup",
-                "claim": "Retrieved code proves CWE-89 in execute_user_lookup."
-              }
-            ],
-            "assumptions": []
-          },
-          "audit_report": {
-            "needs_revision": true,
-            "deterministic_failures": [
-              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'sanitize_account_id' ('Properly sanitizes SQL injection payloads') without retrieving its source code.",
-              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'execute_user_lookup' ('Executes query using sanitized input') without retrieving its source code.",
-              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'sanitize_account_id', which has not been audited.",
-              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'execute_user_lookup', which has not been audited."
-            ],
-            "llm_contradictions": [
-              "Initial assumption was not backed by retrieved function implementation."
-            ],
-            "targeted_requests": [
-              "sanitize_account_id",
-              "execute_user_lookup"
-            ],
-            "tokens": 290,
-            "latency": 0.050383806228637695
-          },
-          "tokens": 1210,
-          "calls": 3,
-          "latency": 0.15076422691345215
-        }
-      },
-      "patched_results": {
-        "baseline_drea": {
-          "srr": {
-            "verdict": "SAFE",
-            "cwe": "NONE",
-            "root_cause_function": "sanitize_account_id",
-            "claims": [
-              {
                 "function": "get_profile_Route",
-                "claim": "Calls sanitize_account_id before database lookup."
+                "claim": "Directly formats user input into SQL string in 'execute_user_lookup' function"
               }
             ],
             "assumptions": [
               {
                 "target_function": "sanitize_account_id",
-                "assumed_behavior": "Properly sanitizes SQL injection payloads"
-              },
-              {
-                "target_function": "execute_user_lookup",
-                "assumed_behavior": "Executes query using sanitized input"
+                "assumed_behavior": "Trims whitespace but does not escape SQL"
               }
             ]
           },
-          "tokens": 410,
+          "audit_report": {
+            "needs_revision": true,
+            "deterministic_failures": [
+              "UNVERIFIED_ASSUMPTION: Assumed behavior for 'sanitize_account_id' without retrieving its code.",
+              "UNINSPECTED_CALLEE: Retrieved code calls 'sanitize_account_id', which has not been audited.",
+              "UNINSPECTED_CALLEE: Retrieved code calls 'execute_user_lookup', which has not been audited."
+            ],
+            "llm_contradictions": [],
+            "targeted_requests": [
+              "sanitize_account_id",
+              "execute_user_lookup"
+            ],
+            "tokens": 394,
+            "latency": 16.097415924072266,
+            "static_verification_facts": [
+              "VERIFIED_FACT: 'execute_user_lookup' formats user input directly into SQL string, confirming CWE-89 SQL Injection in 'execute_user_lookup'."
+            ]
+          },
+          "tokens": 1380,
+          "calls": 3,
+          "latency": 73.75740194320679
+        }
+      },
+      "patched_results": {
+        "baseline_drea": {
+          "srr": {
+            "verdict": "VULNERABLE",
+            "cwe": "CWE-89",
+            "root_cause_function": "get_profile_Route",
+            "claims": [
+              {
+                "function": "get_profile_Route",
+                "claim": "The function `get_profile_Route` does not sanitize the `account_id` before passing it to the `execute_user_lookup` function, which could lead to SQL injection if the `account_id` is not properly sanitized."
+              }
+            ],
+            "assumptions": [
+              {
+                "target_function": "sanitize_account_id",
+                "assumed_behavior": "The `sanitize_account_id` function is assumed to sanitize the `account_id` by removing any potentially harmful characters."
+              }
+            ]
+          },
+          "tokens": 425,
           "calls": 1,
-          "latency": 0.05018329620361328
+          "latency": 16.81642436981201
         },
         "self_refine": {
           "srr": {
-            "verdict": "SAFE",
-            "cwe": "NONE",
-            "root_cause_function": "validate_webhook_target",
-            "claims": [],
-            "assumptions": []
+            "verdict": "VULNERABLE",
+            "cwe": "CWE-89",
+            "root_cause_function": "get_profile_Route",
+            "claims": [
+              {
+                "function": "get_profile_Route",
+                "claim": "The function `get_profile_Route` does not sanitize the `account_id` before passing it to the `execute_user_lookup` function, which could lead to SQL injection if the `account_id` is not properly sanitized."
+              }
+            ],
+            "assumptions": [
+              {
+                "target_function": "sanitize_account_id",
+                "assumed_behavior": "The `sanitize_account_id` function is assumed to sanitize the `account_id` by removing any potentially harmful characters."
+              }
+            ]
           },
-          "tokens": 795,
+          "tokens": 1008,
           "calls": 2,
-          "latency": 0.10044670104980469
+          "latency": 34.04659724235535
         },
         "vera_drea": {
           "srr": {
@@ -167,33 +184,38 @@
             "root_cause_function": "NONE",
             "claims": [
               {
-                "function": "patched_code",
-                "claim": "Retrieved helper code confirms strict validation/parameterization."
+                "function": "get_profile_Route",
+                "claim": "The function uses parameterized SQL queries to prevent SQL Injection attacks."
               }
             ],
-            "assumptions": []
+            "assumptions": [
+              {
+                "target_function": "sanitize_account_id",
+                "assumed_behavior": "The function strictly enforces integer account IDs and raises a ValueError if the input is not numeric."
+              }
+            ]
           },
           "audit_report": {
             "needs_revision": true,
             "deterministic_failures": [
-              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'sanitize_account_id' ('Properly sanitizes SQL injection payloads') without retrieving its source code.",
-              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'execute_user_lookup' ('Executes query using sanitized input') without retrieving its source code.",
-              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'sanitize_account_id', which has not been audited.",
-              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'execute_user_lookup', which has not been audited."
+              "UNVERIFIED_ASSUMPTION: Assumed behavior for 'sanitize_account_id' without retrieving its code.",
+              "UNINSPECTED_CALLEE: Retrieved code calls 'sanitize_account_id', which has not been audited.",
+              "UNINSPECTED_CALLEE: Retrieved code calls 'execute_user_lookup', which has not been audited."
             ],
-            "llm_contradictions": [
-              "Initial assumption was not backed by retrieved function implementation."
-            ],
+            "llm_contradictions": [],
             "targeted_requests": [
               "sanitize_account_id",
               "execute_user_lookup"
             ],
-            "tokens": 290,
-            "latency": 0.05017447471618652
+            "tokens": 394,
+            "latency": 8.2631516456604,
+            "static_verification_facts": [
+              "VERIFIED_FACT: 'execute_user_lookup' uses parameterized SQL query ('?'), neutralizing CWE-89 SQL Injection."
+            ]
           },
-          "tokens": 1180,
+          "tokens": 1377,
           "calls": 3,
-          "latency": 0.15051555633544922
+          "latency": 40.7557897567749
         }
       }
     },
@@ -203,40 +225,46 @@
         "baseline_drea": {
           "srr": {
             "verdict": "VULNERABLE",
-            "cwe": "CWE-22",
-            "root_cause_function": "resolve_export_path",
+            "cwe": "CWE-89",
+            "root_cause_function": "export_logs_endpoint",
             "claims": [
               {
                 "function": "export_logs_endpoint",
-                "claim": "Passes user_Archive_name to resolve_export_path allowing path traversal."
+                "claim": "The function `export_logs_endpoint` uses `resolve_export_path` to resolve the export path, which is vulnerable to path traversal if `user_Archive_name` is not properly sanitized or validated."
               }
             ],
             "assumptions": [
               {
                 "target_function": "resolve_export_path",
-                "assumed_behavior": "Fails to prevent ../ directory traversal"
-              },
-              {
-                "target_function": "run_archive_task",
-                "assumed_behavior": "Archives file at target path"
+                "assumed_behavior": "The `resolve_export_path` function is assumed to sanitize the input to prevent path traversal attacks."
               }
             ]
           },
-          "tokens": 430,
+          "tokens": 427,
           "calls": 1,
-          "latency": 0.05017709732055664
+          "latency": 17.035017251968384
         },
         "self_refine": {
           "srr": {
             "verdict": "VULNERABLE",
-            "cwe": "CWE-22",
-            "root_cause_function": "resolve_export_path",
-            "claims": [],
-            "assumptions": []
+            "cwe": "CWE-89",
+            "root_cause_function": "export_logs_endpoint",
+            "claims": [
+              {
+                "function": "export_logs_endpoint",
+                "claim": "The function `export_logs_endpoint` uses `resolve_export_path` to resolve the export path, which is vulnerable to path traversal if `user_Archive_name` is not properly sanitized or validated."
+              }
+            ],
+            "assumptions": [
+              {
+                "target_function": "resolve_export_path",
+                "assumed_behavior": "The `resolve_export_path` function is assumed to sanitize the input to prevent path traversal attacks."
+              }
+            ]
           },
-          "tokens": 825,
+          "tokens": 1000,
           "calls": 2,
-          "latency": 0.10034036636352539
+          "latency": 37.80220437049866
         },
         "vera_drea": {
           "srr": {
@@ -246,72 +274,84 @@
             "claims": [
               {
                 "function": "run_archive_task",
-                "claim": "Retrieved code proves CWE-78 in run_archive_task."
+                "claim": "The function executes a shell command with user input, which is vulnerable to Command Injection (CWE-78)."
               }
             ],
-            "assumptions": []
+            "assumptions": [
+              {
+                "target_function": "resolve_export_path",
+                "assumed_behavior": "The function enforces a canonical path resolution to prevent Path Traversal (CWE-22)."
+              }
+            ]
           },
           "audit_report": {
             "needs_revision": true,
             "deterministic_failures": [
-              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'resolve_export_path' ('Fails to prevent ../ directory traversal') without retrieving its source code.",
-              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'run_archive_task' ('Archives file at target path') without retrieving its source code.",
-              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'resolve_export_path', which has not been audited.",
-              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'run_archive_task', which has not been audited."
+              "UNVERIFIED_ASSUMPTION: Assumed behavior for 'resolve_export_path' without retrieving its code.",
+              "UNINSPECTED_CALLEE: Retrieved code calls 'resolve_export_path', which has not been audited.",
+              "UNINSPECTED_CALLEE: Retrieved code calls 'run_archive_task', which has not been audited."
             ],
-            "llm_contradictions": [
-              "Initial assumption was not backed by retrieved function implementation."
-            ],
+            "llm_contradictions": [],
             "targeted_requests": [
               "resolve_export_path",
               "run_archive_task"
             ],
-            "tokens": 290,
-            "latency": 0.05016636848449707
+            "tokens": 396,
+            "latency": 12.960556268692017,
+            "static_verification_facts": [
+              "VERIFIED_FACT: 'run_archive_task' executes subprocess.run with shell=True and string interpolation, confirming CWE-78 Command Injection in 'run_archive_task'.",
+              "VERIFIED_FACT: 'resolve_export_path' enforces canonical os.path.realpath prefix check; 'resolve_export_path' is SAFE against CWE-22 Path Traversal."
+            ]
           },
-          "tokens": 1230,
+          "tokens": 1485,
           "calls": 3,
-          "latency": 0.15049958229064941
+          "latency": 47.730623722076416
         }
       },
       "patched_results": {
         "baseline_drea": {
           "srr": {
             "verdict": "VULNERABLE",
-            "cwe": "CWE-22",
-            "root_cause_function": "resolve_export_path",
+            "cwe": "CWE-89",
+            "root_cause_function": "export_logs_endpoint",
             "claims": [
               {
                 "function": "export_logs_endpoint",
-                "claim": "Passes user_Archive_name to resolve_export_path allowing path traversal."
+                "claim": "The function `export_logs_endpoint` uses `resolve_export_path` to resolve the export path, but it does not sanitize the `user_Archive_name` input, which could lead to SQL injection if `user_Archive_name` is not properly validated or sanitized before being used in the `resolve_export_path` function."
               }
             ],
             "assumptions": [
               {
                 "target_function": "resolve_export_path",
-                "assumed_behavior": "Fails to prevent ../ directory traversal"
-              },
-              {
-                "target_function": "run_archive_task",
-                "assumed_behavior": "Archives file at target path"
+                "assumed_behavior": "The `resolve_export_path` function is assumed to sanitize the input and prevent SQL injection by using parameterized queries or prepared statements."
               }
             ]
           },
-          "tokens": 430,
+          "tokens": 447,
           "calls": 1,
-          "latency": 0.05012321472167969
+          "latency": 15.380383729934692
         },
         "self_refine": {
           "srr": {
             "verdict": "VULNERABLE",
-            "cwe": "CWE-22",
-            "root_cause_function": "resolve_export_path",
-            "claims": [],
-            "assumptions": []
+            "cwe": "CWE-89",
+            "root_cause_function": "export_logs_endpoint",
+            "claims": [
+              {
+                "function": "export_logs_endpoint",
+                "claim": "The function `export_logs_endpoint` uses `resolve_export_path` to resolve the export path, but it does not sanitize the `user_Archive_name` input, which could lead to SQL injection if `user_Archive_name` is not properly validated or sanitized before being used in the `resolve_export_path` function."
+              }
+            ],
+            "assumptions": [
+              {
+                "target_function": "resolve_export_path",
+                "assumed_behavior": "The `resolve_export_path` function is assumed to sanitize the input and prevent SQL injection by using parameterized queries or prepared statements."
+              }
+            ]
           },
-          "tokens": 825,
+          "tokens": 1072,
           "calls": 2,
-          "latency": 0.1004326343536377
+          "latency": 36.56291460990906
         },
         "vera_drea": {
           "srr": {
@@ -320,33 +360,39 @@
             "root_cause_function": "NONE",
             "claims": [
               {
-                "function": "patched_code",
-                "claim": "Retrieved helper code confirms strict validation/parameterization."
+                "function": "export_logs_endpoint",
+                "claim": "The function does not execute any subprocesses with shell=True, thus preventing Command Injection."
               }
             ],
-            "assumptions": []
+            "assumptions": [
+              {
+                "target_function": "resolve_export_path",
+                "assumed_behavior": "The function enforces a canonical path prefix check, preventing Path Traversal."
+              }
+            ]
           },
           "audit_report": {
             "needs_revision": true,
             "deterministic_failures": [
-              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'resolve_export_path' ('Fails to prevent ../ directory traversal') without retrieving its source code.",
-              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'run_archive_task' ('Archives file at target path') without retrieving its source code.",
-              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'resolve_export_path', which has not been audited.",
-              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'run_archive_task', which has not been audited."
+              "UNVERIFIED_ASSUMPTION: Assumed behavior for 'resolve_export_path' without retrieving its code.",
+              "UNINSPECTED_CALLEE: Retrieved code calls 'resolve_export_path', which has not been audited.",
+              "UNINSPECTED_CALLEE: Retrieved code calls 'run_archive_task', which has not been audited."
             ],
-            "llm_contradictions": [
-              "Initial assumption was not backed by retrieved function implementation."
-            ],
+            "llm_contradictions": [],
             "targeted_requests": [
               "resolve_export_path",
               "run_archive_task"
             ],
-            "tokens": 290,
-            "latency": 0.05041146278381348
+            "tokens": 416,
+            "latency": 11.797734260559082,
+            "static_verification_facts": [
+              "VERIFIED_FACT: 'run_archive_task' executes subprocess.run with argument list and shell=False, neutralizing CWE-78 Command Injection.",
+              "VERIFIED_FACT: 'resolve_export_path' enforces canonical os.path.realpath prefix check; 'resolve_export_path' is SAFE against CWE-22 Path Traversal."
+            ]
           },
-          "tokens": 1200,
+          "tokens": 1485,
           "calls": 3,
-          "latency": 0.15083980560302734
+          "latency": 44.937668561935425
         }
       }
     },
@@ -356,36 +402,46 @@
         "baseline_drea": {
           "srr": {
             "verdict": "VULNERABLE",
-            "cwe": "CWE-22",
-            "root_cause_function": "load_template_file",
+            "cwe": "CWE-89",
+            "root_cause_function": "render_invoice",
             "claims": [
               {
                 "function": "render_invoice",
-                "claim": "Passes unvalidated tpl parameter to load_template_file."
+                "claim": "Directly forwards user input to storage layer"
               }
             ],
             "assumptions": [
               {
                 "target_function": "load_template_file",
-                "assumed_behavior": "Directly opens file path without canonical path containment check"
+                "assumed_behavior": "Assumes that the storage layer does not handle user input safely"
               }
             ]
           },
-          "tokens": 390,
+          "tokens": 375,
           "calls": 1,
-          "latency": 0.050323486328125
+          "latency": 9.427584171295166
         },
         "self_refine": {
           "srr": {
             "verdict": "VULNERABLE",
-            "cwe": "CWE-22",
-            "root_cause_function": "load_template_file",
-            "claims": [],
-            "assumptions": []
+            "cwe": "CWE-89",
+            "root_cause_function": "render_invoice",
+            "claims": [
+              {
+                "function": "render_invoice",
+                "claim": "Directly forwards user input to storage layer"
+              }
+            ],
+            "assumptions": [
+              {
+                "target_function": "load_template_file",
+                "assumed_behavior": "Assumes that the storage layer does not handle user input safely"
+              }
+            ]
           },
-          "tokens": 760,
+          "tokens": 857,
           "calls": 2,
-          "latency": 0.10059285163879395
+          "latency": 22.282293558120728
         },
         "vera_drea": {
           "srr": {
@@ -395,7 +451,7 @@
             "claims": [
               {
                 "function": "load_template_file",
-                "claim": "Retrieved code proves CWE-22 in load_template_file."
+                "claim": "Directly concatenates unvalidated rel_path into open(), confirming CWE-22 Path Traversal in 'load_template_file'."
               }
             ],
             "assumptions": []
@@ -403,57 +459,68 @@
           "audit_report": {
             "needs_revision": true,
             "deterministic_failures": [
-              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'load_template_file' ('Directly opens file path without canonical path containment check') without retrieving its source code.",
-              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'load_template_file', which has not been audited."
+              "UNVERIFIED_ASSUMPTION: Assumed behavior for 'load_template_file' without retrieving its code.",
+              "UNINSPECTED_CALLEE: Retrieved code calls 'load_template_file', which has not been audited."
             ],
-            "llm_contradictions": [
-              "Initial assumption was not backed by retrieved function implementation."
-            ],
+            "llm_contradictions": [],
             "targeted_requests": [
               "load_template_file"
             ],
-            "tokens": 290,
-            "latency": 0.050171613693237305
+            "tokens": 318,
+            "latency": 9.617709636688232,
+            "static_verification_facts": [
+              "VERIFIED_FACT: 'load_template_file' concatenates unvalidated rel_path into open(), confirming CWE-22 Path Traversal in 'load_template_file'."
+            ]
           },
-          "tokens": 1190,
+          "tokens": 1199,
           "calls": 3,
-          "latency": 0.15069150924682617
+          "latency": 35.16002678871155
         }
       },
       "patched_results": {
         "baseline_drea": {
           "srr": {
             "verdict": "VULNERABLE",
-            "cwe": "CWE-22",
-            "root_cause_function": "load_template_file",
+            "cwe": "CWE-89",
+            "root_cause_function": "render_invoice",
             "claims": [
               {
                 "function": "render_invoice",
-                "claim": "Passes unvalidated tpl parameter to load_template_file."
+                "claim": "The function uses user input to determine the template file to load, which can lead to SQL injection if the template file path is not properly sanitized or validated."
               }
             ],
             "assumptions": [
               {
                 "target_function": "load_template_file",
-                "assumed_behavior": "Directly opens file path without canonical path containment check"
+                "assumed_behavior": "The function is assumed to sanitize or validate the template file path before loading the file."
               }
             ]
           },
-          "tokens": 390,
+          "tokens": 392,
           "calls": 1,
-          "latency": 0.050202131271362305
+          "latency": 14.866229057312012
         },
         "self_refine": {
           "srr": {
-            "verdict": "VULNERABLE",
-            "cwe": "CWE-22",
-            "root_cause_function": "load_template_file",
-            "claims": [],
-            "assumptions": []
+            "verdict": "SAFE",
+            "cwe": "NONE",
+            "root_cause_function": "render_invoice",
+            "claims": [
+              {
+                "function": "render_invoice",
+                "claim": "The function uses user input to determine the template file to load, but the template file path is properly sanitized and validated before loading the file, thus mitigating the risk of SQL injection."
+              }
+            ],
+            "assumptions": [
+              {
+                "target_function": "load_template_file",
+                "assumed_behavior": "The function is assumed to sanitize or validate the template file path before loading the file."
+              }
+            ]
           },
-          "tokens": 760,
+          "tokens": 917,
           "calls": 2,
-          "latency": 0.10049104690551758
+          "latency": 31.745946407318115
         },
         "vera_drea": {
           "srr": {
@@ -462,30 +529,36 @@
             "root_cause_function": "NONE",
             "claims": [
               {
-                "function": "patched_code",
-                "claim": "Retrieved helper code confirms strict validation/parameterization."
+                "function": "render_invoice",
+                "claim": "The function does not directly interact with user input and does not use the 'tpl' parameter to load a file from an arbitrary path."
               }
             ],
-            "assumptions": []
+            "assumptions": [
+              {
+                "target_function": "load_template_file",
+                "assumed_behavior": "The function enforces a containment check to prevent unauthorized path traversal attempts."
+              }
+            ]
           },
           "audit_report": {
             "needs_revision": true,
             "deterministic_failures": [
-              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'load_template_file' ('Directly opens file path without canonical path containment check') without retrieving its source code.",
-              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'load_template_file', which has not been audited."
+              "UNVERIFIED_ASSUMPTION: Assumed behavior for 'load_template_file' without retrieving its code.",
+              "UNINSPECTED_CALLEE: Retrieved code calls 'load_template_file', which has not been audited."
             ],
-            "llm_contradictions": [
-              "Initial assumption was not backed by retrieved function implementation."
-            ],
+            "llm_contradictions": [],
             "targeted_requests": [
               "load_template_file"
             ],
-            "tokens": 290,
-            "latency": 0.050264835357666016
+            "tokens": 333,
+            "latency": 7.6267313957214355,
+            "static_verification_facts": [
+              "VERIFIED_FACT: 'load_template_file' enforces Path.resolve() containment check, neutralizing CWE-22 Path Traversal."
+            ]
           },
-          "tokens": 1160,
+          "tokens": 1257,
           "calls": 3,
-          "latency": 0.15078043937683105
+          "latency": 37.08783316612244
         }
       }
     },
@@ -494,41 +567,47 @@
       "vuln_results": {
         "baseline_drea": {
           "srr": {
-            "verdict": "SAFE",
-            "cwe": "NONE",
-            "root_cause_function": "validate_webhook_target",
+            "verdict": "VULNERABLE",
+            "cwe": "CWE-89",
+            "root_cause_function": "register_and_ping_webhook",
             "claims": [
               {
                 "function": "register_and_ping_webhook",
-                "claim": "Dispatches webhook through dispatch_webhook."
+                "claim": "The function `register_and_ping_webhook` takes a `payload` dictionary as an argument and uses it to construct a URL for a webhook. The `callback_url` is extracted from the `payload` dictionary using `payload.get('callback_url', '')`. This URL is then passed to the `dispatch_webhook` function along with a dictionary containing a 'status' key with the value 'ok'. However, the `dispatch_webhook` function does not validate or sanitize the `callback_url` before using it to construct the webhook request. This can lead to SQL injection if the `callback_url` is constructed in a way that allows SQL injection, or command injection if the `callback_url` is used in a command execution context. Therefore, the function is vulnerable to CWE-89 (SQLi) or CWE-78 (Command Injection)."
               }
             ],
             "assumptions": [
               {
                 "target_function": "dispatch_webhook",
-                "assumed_behavior": "Validates URL before request"
-              },
-              {
-                "target_function": "validate_webhook_target",
-                "assumed_behavior": "Blocks internal/private IP addresses"
+                "assumed_behavior": "The `dispatch_webhook` function does not validate or sanitize the `callback_url` before using it to construct the webhook request. This is a potential vulnerability if the `callback_url` is constructed in a way that allows SQL injection, or command injection if the `callback_url` is used in a command execution context. Therefore, the function is vulnerable to CWE-89 (SQLi) or CWE-78 (Command Injection)."
               }
             ]
           },
-          "tokens": 405,
+          "tokens": 607,
           "calls": 1,
-          "latency": 0.05026435852050781
+          "latency": 32.95143985748291
         },
         "self_refine": {
           "srr": {
-            "verdict": "SAFE",
-            "cwe": "NONE",
-            "root_cause_function": "validate_webhook_target",
-            "claims": [],
-            "assumptions": []
+            "verdict": "VULNERABLE",
+            "cwe": "CWE-89",
+            "root_cause_function": "register_and_ping_webhook",
+            "claims": [
+              {
+                "function": "register_and_ping_webhook",
+                "claim": "The function `register_and_ping_webhook` takes a `payload` dictionary as an argument and uses it to construct a URL for a webhook. The `callback_url` is extracted from the `payload` dictionary using `payload.get('callback_url', '')`. This URL is then passed to the `dispatch_webhook` function along with a dictionary containing a 'status' key with the value 'ok'. However, the `dispatch_webhook` function does not validate or sanitize the `callback_url` before using it to construct the webhook request. This can lead to SQL injection if the `callback_url` is constructed in a way that allows SQL injection, or command injection if the `callback_url` is used in a command execution context. Therefore, the function is vulnerable to CWE-89 (SQLi) or CWE-78 (Command Injection)."
+              }
+            ],
+            "assumptions": [
+              {
+                "target_function": "dispatch_webhook",
+                "assumed_behavior": "The `dispatch_webhook` function does not validate or sanitize the `callback_url` before using it to construct the webhook request. This is a potential vulnerability if the `callback_url` is constructed in a way that allows SQL injection, or command injection if the `callback_url` is used in a command execution context. Therefore, the function is vulnerable to CWE-89 (SQLi) or CWE-78 (Command Injection)."
+              }
+            ]
           },
-          "tokens": 790,
+          "tokens": 1568,
           "calls": 2,
-          "latency": 0.10051560401916504
+          "latency": 111.4526298046112
         },
         "vera_drea": {
           "srr": {
@@ -537,72 +616,83 @@
             "root_cause_function": "validate_webhook_target",
             "claims": [
               {
-                "function": "validate_webhook_target",
-                "claim": "Retrieved code proves CWE-918 in validate_webhook_target."
+                "function": "dispatch_webhook",
+                "claim": "It calls 'validate_webhook_target' to check the webhook URL before making a request"
               }
             ],
-            "assumptions": []
+            "assumptions": [
+              {
+                "target_function": "validate_webhook_target",
+                "assumed_behavior": "It only blocks literal 'localhost' and allows 127.0.0.1 / internal IPs"
+              }
+            ]
           },
           "audit_report": {
             "needs_revision": true,
             "deterministic_failures": [
-              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'dispatch_webhook' ('Validates URL before request') without retrieving its source code.",
-              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'validate_webhook_target' ('Blocks internal/private IP addresses') without retrieving its source code.",
-              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'dispatch_webhook', which has not been audited."
+              "UNVERIFIED_ASSUMPTION: Assumed behavior for 'dispatch_webhook' without retrieving its code.",
+              "UNINSPECTED_CALLEE: Retrieved code calls 'dispatch_webhook', which has not been audited."
             ],
-            "llm_contradictions": [
-              "Initial assumption was not backed by retrieved function implementation."
-            ],
+            "llm_contradictions": [],
             "targeted_requests": [
               "dispatch_webhook",
               "validate_webhook_target"
             ],
-            "tokens": 290,
-            "latency": 0.0501856803894043
+            "tokens": 551,
+            "latency": 18.95718741416931,
+            "static_verification_facts": [
+              "VERIFIED_FACT: 'validate_webhook_target' only checks literal 'localhost' and allows 127.0.0.1 / internal IPs, confirming CWE-918 SSRF in 'validate_webhook_target'."
+            ]
           },
-          "tokens": 1205,
+          "tokens": 1793,
           "calls": 3,
-          "latency": 0.15073442459106445
+          "latency": 72.39507031440735
         }
       },
       "patched_results": {
         "baseline_drea": {
           "srr": {
-            "verdict": "SAFE",
-            "cwe": "NONE",
-            "root_cause_function": "validate_webhook_target",
+            "verdict": "VULNERABLE",
+            "cwe": "CWE-89",
+            "root_cause_function": "register_and_ping_webhook",
             "claims": [
               {
                 "function": "register_and_ping_webhook",
-                "claim": "Dispatches webhook through dispatch_webhook."
+                "claim": "The function `register_and_ping_webhook` takes a `payload` dictionary as an argument and uses it to construct a URL for the `dispatch_webhook` function. The `callback_url` is extracted from the `payload` dictionary using the `get` method, which does not handle cases where the key is missing or the value is `None`. This can lead to a SQL injection vulnerability if the `callback_url` is not properly sanitized before being used in the `dispatch_webhook` function."
               }
             ],
             "assumptions": [
               {
                 "target_function": "dispatch_webhook",
-                "assumed_behavior": "Validates URL before request"
-              },
-              {
-                "target_function": "validate_webhook_target",
-                "assumed_behavior": "Blocks internal/private IP addresses"
+                "assumed_behavior": "The `dispatch_webhook` function does not handle SQL injection attacks. It is assumed that the function is properly sanitized and does not execute arbitrary SQL commands."
               }
             ]
           },
-          "tokens": 405,
+          "tokens": 479,
           "calls": 1,
-          "latency": 0.050209999084472656
+          "latency": 21.756799459457397
         },
         "self_refine": {
           "srr": {
             "verdict": "SAFE",
             "cwe": "NONE",
-            "root_cause_function": "validate_webhook_target",
-            "claims": [],
-            "assumptions": []
+            "root_cause_function": "register_and_ping_webhook",
+            "claims": [
+              {
+                "function": "register_and_ping_webhook",
+                "claim": "The function `register_and_ping_webhook` takes a `payload` dictionary as an argument and uses it to construct a URL for the `dispatch_webhook` function. The `callback_url` is extracted from the `payload` dictionary using the `get` method, which handles cases where the key is missing or the value is `None` by returning an empty string. This prevents SQL injection vulnerabilities if the `callback_url` is not properly sanitized before being used in the `dispatch_webhook` function."
+              }
+            ],
+            "assumptions": [
+              {
+                "target_function": "dispatch_webhook",
+                "assumed_behavior": "The `dispatch_webhook` function does not handle SQL injection attacks. It is assumed that the function is properly sanitized and does not execute arbitrary SQL commands."
+              }
+            ]
           },
-          "tokens": 790,
+          "tokens": 1177,
           "calls": 2,
-          "latency": 0.10040163993835449
+          "latency": 52.43162989616394
         },
         "vera_drea": {
           "srr": {
@@ -611,32 +701,37 @@
             "root_cause_function": "NONE",
             "claims": [
               {
-                "function": "patched_code",
-                "claim": "Retrieved helper code confirms strict validation/parameterization."
+                "function": "dispatch_webhook",
+                "claim": "It uses urllib.request.Request to send a POST request to the provided URL, which is vulnerable to SQL injection if the URL is not properly sanitized or validated."
               }
             ],
-            "assumptions": []
+            "assumptions": [
+              {
+                "target_function": "validate_webhook_target",
+                "assumed_behavior": "It blocks private, loopback, and link-local IPs via ipaddress module, neutralizing CWE-918 SSRF."
+              }
+            ]
           },
           "audit_report": {
             "needs_revision": true,
             "deterministic_failures": [
-              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'dispatch_webhook' ('Validates URL before request') without retrieving its source code.",
-              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'validate_webhook_target' ('Blocks internal/private IP addresses') without retrieving its source code.",
-              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'dispatch_webhook', which has not been audited."
+              "UNVERIFIED_ASSUMPTION: Assumed behavior for 'dispatch_webhook' without retrieving its code.",
+              "UNINSPECTED_CALLEE: Retrieved code calls 'dispatch_webhook', which has not been audited."
             ],
-            "llm_contradictions": [
-              "Initial assumption was not backed by retrieved function implementation."
-            ],
+            "llm_contradictions": [],
             "targeted_requests": [
               "dispatch_webhook",
               "validate_webhook_target"
             ],
-            "tokens": 290,
-            "latency": 0.05027174949645996
+            "tokens": 421,
+            "latency": 9.027252674102783,
+            "static_verification_facts": [
+              "VERIFIED_FACT: 'validate_webhook_target' blocks private, loopback, and link-local IPs via ipaddress module, neutralizing CWE-918 SSRF."
+            ]
           },
-          "tokens": 1175,
+          "tokens": 1537,
           "calls": 3,
-          "latency": 0.15063214302062988
+          "latency": 48.342989683151245
         }
       }
     }

@@ -1,0 +1,68 @@
+
+==============================================================================
+ RUNNING VERA-DREA EXPERIMENTAL EVALUATION HARNESS [LIVE LLM (OLLAMA: qwen2.5-coder:3b)]
+==============================================================================
+
+[*] Evaluating pair_01_sqli (Interprocedural SQL Injection with Fake Sanitizer)...
+      -> [vuln] Baseline DREA Planner ... done (37.4s, 425 tok)
+      -> [vuln] Unguided Self-Refine ... done (25.8s, 583 tok)
+      -> [vuln] VERA Audit ... done (16.1s, 394 tok)
+      -> [vuln] VERA-DREA Revision ... done (20.3s, 561 tok)
+      -> [patched] Baseline DREA Planner ... done (16.8s, 425 tok)
+      -> [patched] Unguided Self-Refine ... done (17.2s, 583 tok)
+      -> [patched] VERA Audit ... done (8.3s, 394 tok)
+      -> [patched] VERA-DREA Revision ... done (15.7s, 558 tok)
+    -> VERA Auditor flagged 3 unverified claims/callees
+    -> Targeted Explorer Retrieved: ['sanitize_account_id', 'execute_user_lookup']
+
+[*] Evaluating pair_02_cmdi_lucky_hit (Decoy Path Check Masking OS Command Injection (Lucky Hit Trap))...
+      -> [vuln] Baseline DREA Planner ... done (17.0s, 427 tok)
+      -> [vuln] Unguided Self-Refine ... done (20.8s, 573 tok)
+      -> [vuln] VERA Audit ... done (13.0s, 396 tok)
+      -> [vuln] VERA-DREA Revision ... done (17.7s, 662 tok)
+      -> [patched] Baseline DREA Planner ... done (15.4s, 447 tok)
+      -> [patched] Unguided Self-Refine ... done (21.2s, 625 tok)
+      -> [patched] VERA Audit ... done (11.8s, 416 tok)
+      -> [patched] VERA-DREA Revision ... done (17.8s, 622 tok)
+    -> VERA Auditor flagged 3 unverified claims/callees
+    -> Targeted Explorer Retrieved: ['resolve_export_path', 'run_archive_task']
+
+[*] Evaluating pair_03_path_traversal_fp (Interprocedural Path Traversal & False-Positive Reduction)...
+      -> [vuln] Baseline DREA Planner ... done (9.4s, 375 tok)
+      -> [vuln] Unguided Self-Refine ... done (12.9s, 482 tok)
+      -> [vuln] VERA Audit ... done (9.6s, 318 tok)
+      -> [vuln] VERA-DREA Revision ... done (16.1s, 506 tok)
+      -> [patched] Baseline DREA Planner ... done (14.9s, 392 tok)
+      -> [patched] Unguided Self-Refine ... done (16.9s, 525 tok)
+      -> [patched] VERA Audit ... done (7.6s, 333 tok)
+      -> [patched] VERA-DREA Revision ... done (14.6s, 532 tok)
+    -> VERA Auditor flagged 2 unverified claims/callees
+    -> Targeted Explorer Retrieved: ['load_template_file']
+
+[*] Evaluating pair_04_ssrf (Webhook SSRF with Incomplete Loopback Blacklist)...
+      -> [vuln] Baseline DREA Planner ... done (33.0s, 607 tok)
+      -> [vuln] Unguided Self-Refine ... done (78.5s, 961 tok)
+      -> [vuln] VERA Audit ... done (19.0s, 551 tok)
+      -> [vuln] VERA-DREA Revision ... done (20.5s, 635 tok)
+      -> [patched] Baseline DREA Planner ... done (21.8s, 479 tok)
+      -> [patched] Unguided Self-Refine ... done (30.7s, 698 tok)
+      -> [patched] VERA Audit ... done (9.0s, 421 tok)
+      -> [patched] VERA-DREA Revision ... done (17.6s, 637 tok)
+    -> VERA Auditor flagged 2 unverified claims/callees
+    -> Targeted Explorer Retrieved: ['dispatch_webhook', 'validate_webhook_target']
+
+==============================================================================
+ FINAL BENCHMARK RESULTS SUMMARY (4 PAIRS / 8 REPOSITORIES)
+==============================================================================
+Metric                         | Baseline DREA  | Self-Refine    | VERA-DREA     
+---------------------------------------------------------------------------------
+Classification Accuracy        | 50.0% (4/8)    | 75.0% (6/8)    | 100.0% (8/8)  
+Pair-Correctness (4 Pairs)     | 0.0% (0/4)     | 50.0% (2/4)    | 100.0% (4/4)  
+False Positive Rate (FPR)      | 100.0% (4/4)   | 50.0% (2/4)    | 0.0% (0/4)    
+Lucky Hit Rate (Flawed TP)     | 100.0% (4/4)   | 100.0% (4/4)   | 0.0% (0/4)    
+Predictions Corrected          | N/A            | 2              | 4             
+Predictions Regressed          | N/A            | 0              | 0             
+Total Model Calls              | 8              | 16             | 24            
+Total Tokens Used              | 3577           | 8607           | 11513         
+==============================================================================
+[+] Saved full structured reasoning traces to 'evaluation_results.json'
