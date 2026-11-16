@@ -66,8 +66,3 @@ for the repository snapshot in a folder that `build_paired_dataset.py` never cre
 Outputs: `code/logs/<pair>/<vul|sec>/<model>/<condition>/` holds a `.jsonl`
 trace (scored by the judge) and a `.rounds.json` summary per run;
 `code/results/` holds the CSV tables.
-
-## Git workflow
-- Don't commit to `main` directly. Make a branch: `git checkout -b raj/verifier`
-- Push it (`git push -u origin raj/verifier`) and open a Pull Request; one teammate reviews before merging.
-- Pull often: `git checkout main`, `git pull`, then `git checkout <your-branch>` and `git merge main`.
