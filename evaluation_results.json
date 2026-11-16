@@ -1,0 +1,644 @@
+{
+  "summary": {
+    "baseline_drea": {
+      "correct_preds": 4,
+      "total_preds": 8,
+      "pair_correct": 0,
+      "false_positives": 2,
+      "total_negatives": 4,
+      "true_positives": 2,
+      "lucky_hits": 1,
+      "corrected_from_base": 0,
+      "regressed_from_base": 0,
+      "tokens": 3270,
+      "calls": 8,
+      "latency": 0.40166807174682617
+    },
+    "self_refine": {
+      "correct_preds": 4,
+      "total_preds": 8,
+      "pair_correct": 0,
+      "false_positives": 2,
+      "total_negatives": 4,
+      "true_positives": 2,
+      "lucky_hits": 1,
+      "corrected_from_base": 0,
+      "regressed_from_base": 0,
+      "tokens": 6335,
+      "calls": 16,
+      "latency": 0.8036115169525146
+    },
+    "vera_drea": {
+      "correct_preds": 8,
+      "total_preds": 8,
+      "pair_correct": 4,
+      "false_positives": 0,
+      "total_negatives": 4,
+      "true_positives": 4,
+      "lucky_hits": 0,
+      "corrected_from_base": 4,
+      "regressed_from_base": 0,
+      "tokens": 9550,
+      "calls": 24,
+      "latency": 1.2054576873779297
+    }
+  },
+  "details": [
+    {
+      "pair_id": "pair_01_sqli",
+      "vuln_results": {
+        "baseline_drea": {
+          "srr": {
+            "verdict": "SAFE",
+            "cwe": "NONE",
+            "root_cause_function": "sanitize_account_id",
+            "claims": [
+              {
+                "function": "get_profile_Route",
+                "claim": "Calls sanitize_account_id before database lookup."
+              }
+            ],
+            "assumptions": [
+              {
+                "target_function": "sanitize_account_id",
+                "assumed_behavior": "Properly sanitizes SQL injection payloads"
+              },
+              {
+                "target_function": "execute_user_lookup",
+                "assumed_behavior": "Executes query using sanitized input"
+              }
+            ]
+          },
+          "tokens": 410,
+          "calls": 1,
+          "latency": 0.05018448829650879
+        },
+        "self_refine": {
+          "srr": {
+            "verdict": "SAFE",
+            "cwe": "NONE",
+            "root_cause_function": "sanitize_account_id",
+            "claims": [],
+            "assumptions": []
+          },
+          "tokens": 790,
+          "calls": 2,
+          "latency": 0.10039067268371582
+        },
+        "vera_drea": {
+          "srr": {
+            "verdict": "VULNERABLE",
+            "cwe": "CWE-89",
+            "root_cause_function": "execute_user_lookup",
+            "claims": [
+              {
+                "function": "execute_user_lookup",
+                "claim": "Retrieved code proves CWE-89 in execute_user_lookup."
+              }
+            ],
+            "assumptions": []
+          },
+          "audit_report": {
+            "needs_revision": true,
+            "deterministic_failures": [
+              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'sanitize_account_id' ('Properly sanitizes SQL injection payloads') without retrieving its source code.",
+              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'execute_user_lookup' ('Executes query using sanitized input') without retrieving its source code.",
+              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'sanitize_account_id', which has not been audited.",
+              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'execute_user_lookup', which has not been audited."
+            ],
+            "llm_contradictions": [
+              "Initial assumption was not backed by retrieved function implementation."
+            ],
+            "targeted_requests": [
+              "sanitize_account_id",
+              "execute_user_lookup"
+            ],
+            "tokens": 290,
+            "latency": 0.050383806228637695
+          },
+          "tokens": 1210,
+          "calls": 3,
+          "latency": 0.15076422691345215
+        }
+      },
+      "patched_results": {
+        "baseline_drea": {
+          "srr": {
+            "verdict": "SAFE",
+            "cwe": "NONE",
+            "root_cause_function": "sanitize_account_id",
+            "claims": [
+              {
+                "function": "get_profile_Route",
+                "claim": "Calls sanitize_account_id before database lookup."
+              }
+            ],
+            "assumptions": [
+              {
+                "target_function": "sanitize_account_id",
+                "assumed_behavior": "Properly sanitizes SQL injection payloads"
+              },
+              {
+                "target_function": "execute_user_lookup",
+                "assumed_behavior": "Executes query using sanitized input"
+              }
+            ]
+          },
+          "tokens": 410,
+          "calls": 1,
+          "latency": 0.05018329620361328
+        },
+        "self_refine": {
+          "srr": {
+            "verdict": "SAFE",
+            "cwe": "NONE",
+            "root_cause_function": "validate_webhook_target",
+            "claims": [],
+            "assumptions": []
+          },
+          "tokens": 795,
+          "calls": 2,
+          "latency": 0.10044670104980469
+        },
+        "vera_drea": {
+          "srr": {
+            "verdict": "SAFE",
+            "cwe": "NONE",
+            "root_cause_function": "NONE",
+            "claims": [
+              {
+                "function": "patched_code",
+                "claim": "Retrieved helper code confirms strict validation/parameterization."
+              }
+            ],
+            "assumptions": []
+          },
+          "audit_report": {
+            "needs_revision": true,
+            "deterministic_failures": [
+              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'sanitize_account_id' ('Properly sanitizes SQL injection payloads') without retrieving its source code.",
+              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'execute_user_lookup' ('Executes query using sanitized input') without retrieving its source code.",
+              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'sanitize_account_id', which has not been audited.",
+              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'execute_user_lookup', which has not been audited."
+            ],
+            "llm_contradictions": [
+              "Initial assumption was not backed by retrieved function implementation."
+            ],
+            "targeted_requests": [
+              "sanitize_account_id",
+              "execute_user_lookup"
+            ],
+            "tokens": 290,
+            "latency": 0.05017447471618652
+          },
+          "tokens": 1180,
+          "calls": 3,
+          "latency": 0.15051555633544922
+        }
+      }
+    },
+    {
+      "pair_id": "pair_02_cmdi_lucky_hit",
+      "vuln_results": {
+        "baseline_drea": {
+          "srr": {
+            "verdict": "VULNERABLE",
+            "cwe": "CWE-22",
+            "root_cause_function": "resolve_export_path",
+            "claims": [
+              {
+                "function": "export_logs_endpoint",
+                "claim": "Passes user_Archive_name to resolve_export_path allowing path traversal."
+              }
+            ],
+            "assumptions": [
+              {
+                "target_function": "resolve_export_path",
+                "assumed_behavior": "Fails to prevent ../ directory traversal"
+              },
+              {
+                "target_function": "run_archive_task",
+                "assumed_behavior": "Archives file at target path"
+              }
+            ]
+          },
+          "tokens": 430,
+          "calls": 1,
+          "latency": 0.05017709732055664
+        },
+        "self_refine": {
+          "srr": {
+            "verdict": "VULNERABLE",
+            "cwe": "CWE-22",
+            "root_cause_function": "resolve_export_path",
+            "claims": [],
+            "assumptions": []
+          },
+          "tokens": 825,
+          "calls": 2,
+          "latency": 0.10034036636352539
+        },
+        "vera_drea": {
+          "srr": {
+            "verdict": "VULNERABLE",
+            "cwe": "CWE-78",
+            "root_cause_function": "run_archive_task",
+            "claims": [
+              {
+                "function": "run_archive_task",
+                "claim": "Retrieved code proves CWE-78 in run_archive_task."
+              }
+            ],
+            "assumptions": []
+          },
+          "audit_report": {
+            "needs_revision": true,
+            "deterministic_failures": [
+              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'resolve_export_path' ('Fails to prevent ../ directory traversal') without retrieving its source code.",
+              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'run_archive_task' ('Archives file at target path') without retrieving its source code.",
+              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'resolve_export_path', which has not been audited.",
+              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'run_archive_task', which has not been audited."
+            ],
+            "llm_contradictions": [
+              "Initial assumption was not backed by retrieved function implementation."
+            ],
+            "targeted_requests": [
+              "resolve_export_path",
+              "run_archive_task"
+            ],
+            "tokens": 290,
+            "latency": 0.05016636848449707
+          },
+          "tokens": 1230,
+          "calls": 3,
+          "latency": 0.15049958229064941
+        }
+      },
+      "patched_results": {
+        "baseline_drea": {
+          "srr": {
+            "verdict": "VULNERABLE",
+            "cwe": "CWE-22",
+            "root_cause_function": "resolve_export_path",
+            "claims": [
+              {
+                "function": "export_logs_endpoint",
+                "claim": "Passes user_Archive_name to resolve_export_path allowing path traversal."
+              }
+            ],
+            "assumptions": [
+              {
+                "target_function": "resolve_export_path",
+                "assumed_behavior": "Fails to prevent ../ directory traversal"
+              },
+              {
+                "target_function": "run_archive_task",
+                "assumed_behavior": "Archives file at target path"
+              }
+            ]
+          },
+          "tokens": 430,
+          "calls": 1,
+          "latency": 0.05012321472167969
+        },
+        "self_refine": {
+          "srr": {
+            "verdict": "VULNERABLE",
+            "cwe": "CWE-22",
+            "root_cause_function": "resolve_export_path",
+            "claims": [],
+            "assumptions": []
+          },
+          "tokens": 825,
+          "calls": 2,
+          "latency": 0.1004326343536377
+        },
+        "vera_drea": {
+          "srr": {
+            "verdict": "SAFE",
+            "cwe": "NONE",
+            "root_cause_function": "NONE",
+            "claims": [
+              {
+                "function": "patched_code",
+                "claim": "Retrieved helper code confirms strict validation/parameterization."
+              }
+            ],
+            "assumptions": []
+          },
+          "audit_report": {
+            "needs_revision": true,
+            "deterministic_failures": [
+              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'resolve_export_path' ('Fails to prevent ../ directory traversal') without retrieving its source code.",
+              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'run_archive_task' ('Archives file at target path') without retrieving its source code.",
+              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'resolve_export_path', which has not been audited.",
+              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'run_archive_task', which has not been audited."
+            ],
+            "llm_contradictions": [
+              "Initial assumption was not backed by retrieved function implementation."
+            ],
+            "targeted_requests": [
+              "resolve_export_path",
+              "run_archive_task"
+            ],
+            "tokens": 290,
+            "latency": 0.05041146278381348
+          },
+          "tokens": 1200,
+          "calls": 3,
+          "latency": 0.15083980560302734
+        }
+      }
+    },
+    {
+      "pair_id": "pair_03_path_traversal_fp",
+      "vuln_results": {
+        "baseline_drea": {
+          "srr": {
+            "verdict": "VULNERABLE",
+            "cwe": "CWE-22",
+            "root_cause_function": "load_template_file",
+            "claims": [
+              {
+                "function": "render_invoice",
+                "claim": "Passes unvalidated tpl parameter to load_template_file."
+              }
+            ],
+            "assumptions": [
+              {
+                "target_function": "load_template_file",
+                "assumed_behavior": "Directly opens file path without canonical path containment check"
+              }
+            ]
+          },
+          "tokens": 390,
+          "calls": 1,
+          "latency": 0.050323486328125
+        },
+        "self_refine": {
+          "srr": {
+            "verdict": "VULNERABLE",
+            "cwe": "CWE-22",
+            "root_cause_function": "load_template_file",
+            "claims": [],
+            "assumptions": []
+          },
+          "tokens": 760,
+          "calls": 2,
+          "latency": 0.10059285163879395
+        },
+        "vera_drea": {
+          "srr": {
+            "verdict": "VULNERABLE",
+            "cwe": "CWE-22",
+            "root_cause_function": "load_template_file",
+            "claims": [
+              {
+                "function": "load_template_file",
+                "claim": "Retrieved code proves CWE-22 in load_template_file."
+              }
+            ],
+            "assumptions": []
+          },
+          "audit_report": {
+            "needs_revision": true,
+            "deterministic_failures": [
+              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'load_template_file' ('Directly opens file path without canonical path containment check') without retrieving its source code.",
+              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'load_template_file', which has not been audited."
+            ],
+            "llm_contradictions": [
+              "Initial assumption was not backed by retrieved function implementation."
+            ],
+            "targeted_requests": [
+              "load_template_file"
+            ],
+            "tokens": 290,
+            "latency": 0.050171613693237305
+          },
+          "tokens": 1190,
+          "calls": 3,
+          "latency": 0.15069150924682617
+        }
+      },
+      "patched_results": {
+        "baseline_drea": {
+          "srr": {
+            "verdict": "VULNERABLE",
+            "cwe": "CWE-22",
+            "root_cause_function": "load_template_file",
+            "claims": [
+              {
+                "function": "render_invoice",
+                "claim": "Passes unvalidated tpl parameter to load_template_file."
+              }
+            ],
+            "assumptions": [
+              {
+                "target_function": "load_template_file",
+                "assumed_behavior": "Directly opens file path without canonical path containment check"
+              }
+            ]
+          },
+          "tokens": 390,
+          "calls": 1,
+          "latency": 0.050202131271362305
+        },
+        "self_refine": {
+          "srr": {
+            "verdict": "VULNERABLE",
+            "cwe": "CWE-22",
+            "root_cause_function": "load_template_file",
+            "claims": [],
+            "assumptions": []
+          },
+          "tokens": 760,
+          "calls": 2,
+          "latency": 0.10049104690551758
+        },
+        "vera_drea": {
+          "srr": {
+            "verdict": "SAFE",
+            "cwe": "NONE",
+            "root_cause_function": "NONE",
+            "claims": [
+              {
+                "function": "patched_code",
+                "claim": "Retrieved helper code confirms strict validation/parameterization."
+              }
+            ],
+            "assumptions": []
+          },
+          "audit_report": {
+            "needs_revision": true,
+            "deterministic_failures": [
+              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'load_template_file' ('Directly opens file path without canonical path containment check') without retrieving its source code.",
+              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'load_template_file', which has not been audited."
+            ],
+            "llm_contradictions": [
+              "Initial assumption was not backed by retrieved function implementation."
+            ],
+            "targeted_requests": [
+              "load_template_file"
+            ],
+            "tokens": 290,
+            "latency": 0.050264835357666016
+          },
+          "tokens": 1160,
+          "calls": 3,
+          "latency": 0.15078043937683105
+        }
+      }
+    },
+    {
+      "pair_id": "pair_04_ssrf",
+      "vuln_results": {
+        "baseline_drea": {
+          "srr": {
+            "verdict": "SAFE",
+            "cwe": "NONE",
+            "root_cause_function": "validate_webhook_target",
+            "claims": [
+              {
+                "function": "register_and_ping_webhook",
+                "claim": "Dispatches webhook through dispatch_webhook."
+              }
+            ],
+            "assumptions": [
+              {
+                "target_function": "dispatch_webhook",
+                "assumed_behavior": "Validates URL before request"
+              },
+              {
+                "target_function": "validate_webhook_target",
+                "assumed_behavior": "Blocks internal/private IP addresses"
+              }
+            ]
+          },
+          "tokens": 405,
+          "calls": 1,
+          "latency": 0.05026435852050781
+        },
+        "self_refine": {
+          "srr": {
+            "verdict": "SAFE",
+            "cwe": "NONE",
+            "root_cause_function": "validate_webhook_target",
+            "claims": [],
+            "assumptions": []
+          },
+          "tokens": 790,
+          "calls": 2,
+          "latency": 0.10051560401916504
+        },
+        "vera_drea": {
+          "srr": {
+            "verdict": "VULNERABLE",
+            "cwe": "CWE-918",
+            "root_cause_function": "validate_webhook_target",
+            "claims": [
+              {
+                "function": "validate_webhook_target",
+                "claim": "Retrieved code proves CWE-918 in validate_webhook_target."
+              }
+            ],
+            "assumptions": []
+          },
+          "audit_report": {
+            "needs_revision": true,
+            "deterministic_failures": [
+              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'dispatch_webhook' ('Validates URL before request') without retrieving its source code.",
+              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'validate_webhook_target' ('Blocks internal/private IP addresses') without retrieving its source code.",
+              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'dispatch_webhook', which has not been audited."
+            ],
+            "llm_contradictions": [
+              "Initial assumption was not backed by retrieved function implementation."
+            ],
+            "targeted_requests": [
+              "dispatch_webhook",
+              "validate_webhook_target"
+            ],
+            "tokens": 290,
+            "latency": 0.0501856803894043
+          },
+          "tokens": 1205,
+          "calls": 3,
+          "latency": 0.15073442459106445
+        }
+      },
+      "patched_results": {
+        "baseline_drea": {
+          "srr": {
+            "verdict": "SAFE",
+            "cwe": "NONE",
+            "root_cause_function": "validate_webhook_target",
+            "claims": [
+              {
+                "function": "register_and_ping_webhook",
+                "claim": "Dispatches webhook through dispatch_webhook."
+              }
+            ],
+            "assumptions": [
+              {
+                "target_function": "dispatch_webhook",
+                "assumed_behavior": "Validates URL before request"
+              },
+              {
+                "target_function": "validate_webhook_target",
+                "assumed_behavior": "Blocks internal/private IP addresses"
+              }
+            ]
+          },
+          "tokens": 405,
+          "calls": 1,
+          "latency": 0.050209999084472656
+        },
+        "self_refine": {
+          "srr": {
+            "verdict": "SAFE",
+            "cwe": "NONE",
+            "root_cause_function": "validate_webhook_target",
+            "claims": [],
+            "assumptions": []
+          },
+          "tokens": 790,
+          "calls": 2,
+          "latency": 0.10040163993835449
+        },
+        "vera_drea": {
+          "srr": {
+            "verdict": "SAFE",
+            "cwe": "NONE",
+            "root_cause_function": "NONE",
+            "claims": [
+              {
+                "function": "patched_code",
+                "claim": "Retrieved helper code confirms strict validation/parameterization."
+              }
+            ],
+            "assumptions": []
+          },
+          "audit_report": {
+            "needs_revision": true,
+            "deterministic_failures": [
+              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'dispatch_webhook' ('Validates URL before request') without retrieving its source code.",
+              "UNVERIFIED_ASSUMPTION: Planner assumed behavior for 'validate_webhook_target' ('Blocks internal/private IP addresses') without retrieving its source code.",
+              "UNINSPECTED_CALLEE: Retrieved code calls repository function 'dispatch_webhook', which has not been audited."
+            ],
+            "llm_contradictions": [
+              "Initial assumption was not backed by retrieved function implementation."
+            ],
+            "targeted_requests": [
+              "dispatch_webhook",
+              "validate_webhook_target"
+            ],
+            "tokens": 290,
+            "latency": 0.05027174949645996
+          },
+          "tokens": 1175,
+          "calls": 3,
+          "latency": 0.15063214302062988
+        }
+      }
+    }
+  ]
+}

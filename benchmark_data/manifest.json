@@ -1,0 +1,38 @@
+[
+  {
+    "pair_id": "pair_01_sqli",
+    "cwe": "CWE-89",
+    "name": "Interprocedural SQL Injection with Fake Sanitizer",
+    "entry_file": "app.py",
+    "true_root_cause_func": "execute_user_lookup",
+    "vuln_dir": "benchmark_data/pair_01_sqli/vuln",
+    "patched_dir": "benchmark_data/pair_01_sqli/patched"
+  },
+  {
+    "pair_id": "pair_02_cmdi_lucky_hit",
+    "cwe": "CWE-78",
+    "name": "Decoy Path Check Masking OS Command Injection (Lucky Hit Trap)",
+    "entry_file": "app.py",
+    "true_root_cause_func": "run_archive_task",
+    "vuln_dir": "benchmark_data/pair_02_cmdi_lucky_hit/vuln",
+    "patched_dir": "benchmark_data/pair_02_cmdi_lucky_hit/patched"
+  },
+  {
+    "pair_id": "pair_03_path_traversal_fp",
+    "cwe": "CWE-22",
+    "name": "Interprocedural Path Traversal & False-Positive Reduction",
+    "entry_file": "app.py",
+    "true_root_cause_func": "load_template_file",
+    "vuln_dir": "benchmark_data/pair_03_path_traversal_fp/vuln",
+    "patched_dir": "benchmark_data/pair_03_path_traversal_fp/patched"
+  },
+  {
+    "pair_id": "pair_04_ssrf",
+    "cwe": "CWE-918",
+    "name": "Webhook SSRF with Incomplete Loopback Blacklist",
+    "entry_file": "app.py",
+    "true_root_cause_func": "validate_webhook_target",
+    "vuln_dir": "benchmark_data/pair_04_ssrf/vuln",
+    "patched_dir": "benchmark_data/pair_04_ssrf/patched"
+  }
+]
