@@ -1,7 +1,5 @@
 # VERA-DREA
 
-Project Overview
-
 Large Language Models (LLMs) frequently suffer from **"Lucky Hits"** in repository-level vulnerability detection: they flag a repository as vulnerable (`True Positive`), but fabricate the execution path or blame the wrong function/CWE.
 
 **VERA-DREA** combines two recent frameworks into a closed self-correction loop:
