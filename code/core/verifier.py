@@ -134,6 +134,81 @@ BUILTINS = {
 
 
 # --------------------------------------------------------------------------
+# Raj's MVP failure codes -> this interface (raj-baseline/vera_drea_mvp.py)
+# --------------------------------------------------------------------------
+# When porting the MVP auditor, build each ClaimCheck with check_from_code()
+# so the status, failure type and Explorer request are consistent.
+# {name} is filled with the function the finding is about.
+RAJ_CODE_MAP: dict[str, dict[str, str]] = {
+    "HALLUCINATED_SYMBOL": {
+        "status": "CONTRADICTED",
+        "failure_type": "F1 Scope / evidence integrity",
+        "finding": "The claim names `{name}`, but no such function exists in the repository.",
+        "evidence_needed": "The function that actually performs this step.",
+        "exploration_request": "Search the repository for `{name}`. If it does not exist, find the "
+                               "function that really handles this step and quote it with its file path.",
+    },
+    "UNGROUNDED_CLAIM": {
+        "status": "UNRESOLVED",
+        "failure_type": "F2 External assumption",
+        "finding": "The claim relies on `{name}`, whose code was never retrieved.",
+        "evidence_needed": "The source of `{name}`.",
+        "exploration_request": "Read `{name}` and quote the lines that support or refute this claim.",
+    },
+    "UNVERIFIED_ASSUMPTION": {
+        "status": "UNRESOLVED",
+        "failure_type": "F2 External assumption",
+        "finding": "The analysis assumes how `{name}` behaves without reading it.",
+        "evidence_needed": "Whether `{name}` validates, sanitizes, or passes its input through.",
+        "exploration_request": "Read `{name}` and report whether it validates, sanitizes, or passes "
+                               "the tainted value through unchanged.",
+    },
+    "UNINSPECTED_CALLEE": {
+        "status": "UNRESOLVED",
+        "failure_type": "F5 Trace incompleteness",
+        "finding": "Code on the trigger path calls `{name}`, which was not inspected.",
+        "evidence_needed": "What `{name}` does with the tainted value.",
+        "exploration_request": "Inspect `{name}` (called on the trigger path) and report whether it "
+                               "changes, checks, or blocks the tainted value.",
+    },
+    # A sanitizer / safe API on the path (MVP "neutralizing" facts), generalized
+    # by CWE: parameterized SQL (CWE-89), shell=False arg lists (CWE-78),
+    # realpath/resolve + prefix check (CWE-22), private-IP blocking (CWE-918).
+    "PROTECTION_PRESENT": {
+        "status": "CONTRADICTED",
+        "failure_type": "F6 Path fabrication (missed protection)",
+        "finding": "`{name}` applies a protection on this path that the claim does not account for.",
+        "evidence_needed": "Why the protection in `{name}` does not stop the attack, with code.",
+        "exploration_request": "Read `{name}` and decide whether its check can be bypassed; quote "
+                               "the exact lines. If it cannot, the path is not exploitable.",
+    },
+    # The MVP's LLM audit ('contradicted_claims'): semantic contradiction.
+    "LLM_CONTRADICTED": {
+        "status": "CONTRADICTED",
+        "failure_type": "F8 Verdict inconsistency",
+        "finding": "The audit model judged this claim inconsistent with the retrieved code: {name}",
+        "evidence_needed": "Code that supports the claim, or a corrected claim.",
+        "exploration_request": "Re-check this claim against the code and quote the lines it depends on.",
+    },
+}
+
+
+def check_from_code(code: str, claim_id: str, field: str, claim_text: str, name: str) -> ClaimCheck:
+    """Build a ClaimCheck from one of Raj's MVP failure codes."""
+    spec = RAJ_CODE_MAP[code]
+    return ClaimCheck(
+        claim_id=claim_id,
+        field=field,
+        claim_text=claim_text,
+        status=spec["status"],
+        failure_type=spec["failure_type"],
+        finding=spec["finding"].format(name=name),
+        evidence_needed=spec["evidence_needed"].format(name=name),
+        exploration_request=spec["exploration_request"].format(name=name),
+    )
+
+
+# --------------------------------------------------------------------------
 # PLACEHOLDER verify(): replace with the real verifier
 # --------------------------------------------------------------------------
 def verify(

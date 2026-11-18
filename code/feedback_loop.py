@@ -14,6 +14,18 @@ How it works
 4. Each condition gets its own JSONL log (full trace, so DREA's evaluator and
    judge score the FINAL answer) plus a <ts>.rounds.json summary with the
    verdict, revision status, audit, tokens and time for every round.
+5. Robustness (added Nov 18):
+     - Missing verdict: if a reply has no parseable <security_assessment>, the
+       Planner is re-asked ONCE for just the final XML (no tools). This applies
+       to round 0 too, so the DREA baseline gets the same chance; the flag
+       `no_verdict_before_reask` records how often it was needed.
+     - API/runtime errors: a failed turn is retried ONCE on a fresh thread
+       with the same conversation (GraphRecursionError is not retried).
+     - Evidence gate (verified only): after the last round, the verifier runs
+       on the final answer. A VULNERABLE verdict whose trigger path, evidence
+       or vulnerability claims are CONTRADICTED becomes SECURE in
+       `gated_verdict`. analyze.py reports it as the extra row "verified+gate",
+       so the ungated result is still available.
 
 Usage
 -----
@@ -44,6 +56,7 @@ from core.agent_builder import build_agent
 from core.prompts import get_prompt_set
 from core.prompts.feedback import (
     build_explore_more,
+    build_format_reask,
     build_self_refine,
     build_verified,
 )
@@ -64,6 +77,8 @@ CONDITIONS = ("self_refine", "explore", "verified", "filter")
 # evidence claim is CONTRADICTED. No feedback, no extra LLM calls. It answers
 # "is correcting better than simply discarding?"
 FILTER_FIELDS = ("trigger_path/", "evidence", "vulnerability/")
+GATE_FIELDS = FILTER_FIELDS  # evidence gate uses the same claim fields
+RETRY_WAIT_SECONDS = int(os.getenv("DREA_RETRY_WAIT", "20"))
 BASE_VERSION = "drea"  # round-0 prompts (unchanged DREA)
 LOG_DIR = Path("logs")
 DATASET_BASE_DIR = Path(os.getenv("DREA_DATASET_DIR", "../dataset"))
@@ -187,6 +202,72 @@ def run_round(
     }
 
 
+def _merge_cost(into: dict, extra: dict) -> None:
+    for key in ("main_tokens", "explorer_tokens", "explore_calls", "seconds"):
+        into[key] = round(into.get(key, 0) + extra.get(key, 0), 2)
+
+
+def run_turn(
+    agent,
+    subagent_trace,
+    first_messages: list,
+    retry_prior: list,
+    new_message,
+    thread_id: str,
+    trace_data: list[dict[str, Any]],
+    jsonl_path: Path,
+    recursion_limit: int,
+    feedback_round: bool,
+) -> tuple[dict[str, Any], str]:
+    """One Planner turn, plus at most one retry and at most one format re-ask.
+
+    first_messages: what to send on `thread_id` before `new_message` (the
+        round-0 history for the first feedback round, else nothing because the
+        thread already holds it).
+    retry_prior: the full conversation before this turn, used to rebuild a
+        fresh thread if the first attempt errors.
+    Returns (run, thread_id_used). Tokens and time of every attempt are summed
+    into `run`, so cost numbers include retries and re-asks.
+    """
+    run = run_round(agent, subagent_trace,
+                    {"messages": list(first_messages) + [new_message]},
+                    thread_id, trace_data, jsonl_path, recursion_limit)
+    run.update(retried=False, first_error=None, reasked=False,
+               no_verdict_before_reask=False, reask_error=None)
+    used_thread = thread_id
+
+    if run["error"] and not run["error"].startswith("GraphRecursionError"):
+        first = run
+        print(f"  ! {first['error'][:200]}  -> retrying once in {RETRY_WAIT_SECONDS}s")
+        time.sleep(RETRY_WAIT_SECONDS)
+        used_thread = f"{thread_id}-retry"
+        run = run_round(agent, subagent_trace,
+                        {"messages": list(retry_prior) + [new_message]},
+                        used_thread, trace_data, jsonl_path, recursion_limit)
+        _merge_cost(run, first)
+        run.update(retried=True, first_error=first["error"], reasked=False,
+                   no_verdict_before_reask=False, reask_error=None)
+
+    if not run["error"] and parse_assessment(run["final_text"]).verdict is None:
+        run["no_verdict_before_reask"] = True
+        reask = build_format_reask(feedback_round)
+        log_user(reask, trace_data, jsonl_path)
+        fix = run_round(agent, subagent_trace,
+                        {"messages": [HumanMessage(content=reask)]},
+                        used_thread, trace_data, jsonl_path, recursion_limit)
+        _merge_cost(run, fix)
+        run["reasked"] = True
+        run["reask_error"] = fix["error"]
+        if fix["final_text"]:
+            run["final_text"] = fix["final_text"]
+        print(f"  ~ no verdict; re-asked -> {parse_assessment(run['final_text']).verdict}")
+    return run, used_thread
+
+
+def history_of(agent, thread_id: str) -> list:
+    return list(agent.get_state({"configurable": {"thread_id": thread_id}}).values.get("messages", []))
+
+
 def log_user(text: str, trace_data: list, jsonl_path: Path) -> None:
     record_trace_entry(
         {"role": "user", "content": [{"type": "text", "content": text}],
@@ -210,7 +291,33 @@ def round_summary(idx: int, run: dict, message: str | None, audit=None) -> dict:
         "explore_calls": run["explore_calls"],
         "seconds": run["seconds"],
         "error": run["error"],
+        "retried": run.get("retried", False),
+        "first_error": run.get("first_error"),
+        "reasked": run.get("reasked", False),
+        "no_verdict_before_reask": run.get("no_verdict_before_reask", False),
+        "reask_error": run.get("reask_error"),
         "final_text": run["final_text"],
+    }
+
+
+def evidence_gate(parsed, workspace, target_code, verify_fn) -> dict:
+    """Evidence gate v1 (verified condition, after the last round).
+
+    A VULNERABLE verdict stands only if none of its trigger-path, evidence or
+    vulnerability claims is CONTRADICTED by the code. Otherwise the gated
+    verdict is SECURE. UNRESOLVED claims do not trigger the gate (yet): the
+    placeholder verifier marks many claims UNRESOLVED, and gating on them
+    would throw away true positives. Tighten once Raj's verifier is merged.
+    """
+    audit = verify_fn(parsed, workspace, target_code)
+    bad = [c for c in audit.checks
+           if c.status == "CONTRADICTED" and c.field.startswith(GATE_FIELDS)]
+    blocked = parsed.verdict == "VULNERABLE" and bool(bad)
+    return {
+        "gated_verdict": "SECURE" if blocked else parsed.verdict,
+        "blocked": blocked,
+        "reasons": [f"[{c.claim_id}] {c.field}: {c.finding}" for c in bad],
+        "audit": audit.to_dict(),
     }
 
 
@@ -302,9 +409,9 @@ def run_project(
     print(f"[{project_name}/{task_type}] workspace: {workspace}")
     print(f"[round 0] DREA -> {r0_jsonl}")
     log_user(prompt, trace_data, r0_jsonl)
-    r0_thread = f"{ts}-r0"
-    r0 = run_round(agent, subagent_trace, {"messages": [{"role": "user", "content": prompt}]},
-                   r0_thread, trace_data, r0_jsonl, recursion_limit)
+    r0, r0_thread = run_turn(agent, subagent_trace, [], [], HumanMessage(content=prompt),
+                             f"{ts}-r0", trace_data, r0_jsonl, recursion_limit,
+                             feedback_round=False)
     r0_info = round_summary(0, r0, None)
     r0_summary_path.write_text(json.dumps(
         {"project": project_name, "type": task_type, "model": model_id,
@@ -314,7 +421,7 @@ def run_project(
     if r0["error"] or not conditions:
         return outputs
 
-    history = agent.get_state({"configurable": {"thread_id": r0_thread}}).values["messages"]
+    history = history_of(agent, r0_thread)
 
     for cond in conditions:
         jsonl, summary_path = paths(cond)
@@ -349,9 +456,11 @@ def run_project(
 
             log_user(message, trace_data, jsonl)
             new_msg = HumanMessage(content=message)
-            agent_input = {"messages": (list(history) + [new_msg]) if k == 1 else [new_msg]}
-            run = run_round(agent, subagent_trace, agent_input, thread,
-                            trace_data, jsonl, recursion_limit)
+            prior = list(history) if k == 1 else history_of(agent, thread)
+            run, thread = run_turn(agent, subagent_trace,
+                                   prior if k == 1 else [], prior, new_msg, thread,
+                                   trace_data, jsonl, recursion_limit,
+                                   feedback_round=True)
             info = round_summary(k, run, message, audit)
             rounds.append(info)
             print(f"[{cond} r{k}] verdict={info['verdict']} status={info['revision_status']} "
@@ -366,6 +475,9 @@ def run_project(
                 break
 
         done = [r for r in rounds if not r.get("skipped")]
+        gate = None
+        if cond == "verified":
+            gate = evidence_gate(parse_assessment(last_text), workspace, target_code, verify_fn)
         summary = {
             "project": project_name, "type": task_type, "model": model_id,
             "condition": cond, "max_rounds": max_rounds, "stop_reason": stop_reason,
@@ -375,11 +487,18 @@ def run_project(
             "extra_main_tokens": sum(r["main_tokens"] for r in done[1:]),
             "extra_explorer_tokens": sum(r["explorer_tokens"] for r in done[1:]),
             "extra_seconds": round(sum(r["seconds"] for r in done[1:]), 2),
+            "errors": [r["error"] for r in done[1:] if r.get("error")],
+            "retried_rounds": sum(bool(r.get("retried")) for r in done[1:]),
+            "reasked_rounds": sum(bool(r.get("reasked")) for r in done[1:]),
             "rounds": rounds,
         }
+        if gate is not None:
+            summary["gated_verdict"] = gate["gated_verdict"]
+            summary["gate"] = gate
         summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+        gate_note = f", gate -> {gate['gated_verdict']}" if gate else ""
         print(f"[{cond}] {summary['initial_verdict']} -> {summary['final_verdict']} "
-              f"({stop_reason}) -> {jsonl}")
+              f"({stop_reason}{gate_note}) -> {jsonl}")
         outputs[cond] = jsonl
     return outputs
 

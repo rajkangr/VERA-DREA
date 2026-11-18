@@ -14,8 +14,18 @@ Q3 Is it worth the cost?             extra Planner/Explorer tokens and time,
 Reasoning (needs the judge):          Lucky Hit Rate among true positives
 
 Usage (from code/):
-  uv run analyze.py --model deepseek-v3.2
-  uv run analyze.py --model deepseek-v3.2 --split test --price-main 0.28 --price-explorer 0.28
+  uv run analyze.py --model deepseek-v3.2 --split dev
+  uv run analyze.py --model deepseek-v3.2 --split test --price-main 0.26 --price-explorer 0.26
+
+Added Nov 18:
+  - Reads ONE run per pair/type (same round 0 for every condition).
+  - Extra row "verified+gate": the verified answer after the evidence gate.
+  - Columns no_verdict_r0 (DREA replies that needed the format re-ask),
+    no_verdict_final, and errors (runs that stopped on an error).
+  - Default prices from PRICES (OpenRouter list prices, $ per 1M tokens).
+    Prompt caching makes the real bill lower; check OpenRouter's Activity page.
+  - instances_*.csv now has pred_cwe and pred_function (from the final
+    answer's <type> and <location>) for the lucky-hit analysis.
 """
 
 from __future__ import annotations
@@ -26,15 +36,27 @@ import json
 from math import comb
 from pathlib import Path
 
-from run_batch import DEFAULT_JSONL, load_items, pair_name, split_items
+from run_batch import DEFAULT_JSONL, load_items, pair_name, pick_run, split_items
 
 HERE = Path(__file__).resolve().parent
-ORDER = ["drea", "self_refine", "explore", "verified", "filter"]
+ORDER = ["drea", "self_refine", "explore", "verified", "verified+gate", "filter"]
+# OpenRouter list prices, $ per 1M input tokens (Nov 2026). Token counts in the
+# logs are mostly input, so this is a close upper bound before caching.
+#   deepseek/deepseek-v3.2: $0.26 in / $0.38 out     openai/gpt-4.1: $2 in / $8 out
+PRICES = {"deepseek-v3.2": 0.26, "gpt-4.1-judge": 2.00}
 
 
-def latest(paths):
-    paths = sorted(paths, key=lambda p: p.name)
-    return paths[-1] if paths else None
+def final_srr(summary: dict, label: str) -> dict:
+    """SRR (cwe, root_cause_function) of the answer that was scored."""
+    if label == "verified+gate" and summary.get("gate", {}).get("blocked"):
+        return {}
+    if label == "filter" and summary.get("stop_reason") == "discarded":
+        return {}
+    rounds = [r for r in summary.get("rounds", []) if "parsed" in r]
+    for r in reversed(rounds):
+        if r.get("verdict"):
+            return (r["parsed"] or {}).get("srr") or {}
+    return {}
 
 
 def judge_reasoning(rounds_path: Path) -> str | None:
@@ -56,22 +78,17 @@ def mcnemar_p(fixed: int, broken: int) -> float:
 
 
 def collect(logs: Path, model: str, allowed_pairs: set[str] | None):
-    """rows[(pair, type, condition)] = summary dict (with round-0 verdict)."""
+    """rows[(pair, type, condition)] = summary dict, all from ONE run per pair/type."""
     rows = {}
     for pair_dir in sorted(p for p in logs.iterdir() if p.is_dir() and not p.name.startswith("_")):
         if allowed_pairs is not None and pair_dir.name not in allowed_pairs:
             continue
         for task_type in ("vul", "sec"):
-            base = pair_dir / task_type / model
-            if not base.is_dir():
-                continue
-            for cond_dir in base.iterdir():
-                f = latest(cond_dir.glob("*.rounds.json"))
-                if f is None:
-                    continue
+            _, files = pick_run(pair_dir / task_type / model)
+            for label, f in files.items():
                 s = json.loads(f.read_text(encoding="utf-8"))
                 r0 = s["rounds"][0]
-                rows[(pair_dir.name, task_type, cond_dir.name)] = {
+                row = {
                     "initial": r0.get("verdict"),
                     "final": s.get("final_verdict", r0.get("verdict")),
                     "extra_main": s.get("extra_main_tokens", 0),
@@ -79,9 +96,19 @@ def collect(logs: Path, model: str, allowed_pairs: set[str] | None):
                     "extra_seconds": s.get("extra_seconds", 0),
                     "r0_main": r0.get("main_tokens", 0),
                     "r0_explorer": r0.get("explorer_tokens", 0),
+                    "r0_no_verdict": bool(r0.get("no_verdict_before_reask")),
+                    "error": bool(r0.get("error")) if label == "drea" else s.get("stop_reason") == "error",
                     "reasoning": judge_reasoning(f),
                     "stop": s.get("stop_reason"),
+                    "srr": final_srr(s, label),
                 }
+                rows[(pair_dir.name, task_type, label)] = row
+                if label == "verified" and "gated_verdict" in s:
+                    gated = dict(row, final=s["gated_verdict"],
+                                 stop=("gate_blocked" if s["gate"]["blocked"] else row["stop"]),
+                                 srr=final_srr(s, "verified+gate"),
+                                 reasoning=None if s["gate"]["blocked"] else row["reasoning"])
+                    rows[(pair_dir.name, task_type, "verified+gate")] = gated
     return rows
 
 
@@ -94,11 +121,17 @@ def main() -> None:
     ap.add_argument("--model", required=True)
     ap.add_argument("--logs", type=Path, default=HERE / "logs")
     ap.add_argument("--split", choices=["dev", "test", "all"], default="all")
-    ap.add_argument("--price-main", type=float, default=0.0, help="$ per 1M Planner tokens")
-    ap.add_argument("--price-explorer", type=float, default=0.0, help="$ per 1M Explorer tokens")
+    ap.add_argument("--price-main", type=float, default=None,
+                    help="$ per 1M Planner tokens (default: PRICES[model])")
+    ap.add_argument("--price-explorer", type=float, default=None,
+                    help="$ per 1M Explorer tokens (default: same as Planner)")
     ap.add_argument("--out", type=Path, default=HERE / "results")
     args = ap.parse_args()
 
+    if args.price_main is None:
+        args.price_main = PRICES.get(args.model, 0.0)
+    if args.price_explorer is None:
+        args.price_explorer = args.price_main
     allowed = None
     if args.split != "all":
         allowed = {pair_name(it) for it in split_items(load_items(DEFAULT_JSONL), args.split)}
@@ -124,7 +157,7 @@ def main() -> None:
         for (pair, t), v0 in baseline.items():
             if cond == "drea":
                 r = rows.get((pair, t, "drea")) or {"final": v0, "extra_main": 0, "extra_explorer": 0,
-                                                    "extra_seconds": 0, "reasoning": None}
+                                                    "extra_seconds": 0, "reasoning": None, "srr": {}}
                 final = v0
             else:
                 r = rows.get((pair, t, cond))
@@ -132,9 +165,14 @@ def main() -> None:
                     continue
                 final = r["final"]
             inst[(pair, t)] = (v0, final, r)
+            srr = r.get("srr") or {}
             per_instance.append({"condition": cond, "pair": pair, "type": t, "initial": v0,
                                  "final": final, "correct": correct(t, final),
-                                 "reasoning": r.get("reasoning"), "stop": r.get("stop")})
+                                 "pred_cwe": srr.get("cwe"),
+                                 "pred_function": srr.get("root_cause_function"),
+                                 "reasoning": r.get("reasoning"), "stop": r.get("stop"),
+                                 "r0_no_verdict": r.get("r0_no_verdict", False),
+                                 "error": r.get("error", False)})
 
         vul = [(k, x) for k, x in inst.items() if k[1] == "vul"]
         sec = [(k, x) for k, x in inst.items() if k[1] == "sec"]
@@ -163,6 +201,9 @@ def main() -> None:
             "condition": cond, "instances": n, "pairs": len(full),
             "recall": round(recall, 3), "FPR": round(fpr, 3), "F1": round(f1, 3),
             "P-C": f"{pc}/{len(full)}", "fixed": fixed, "broken": broken, "new_FP": new_fp,
+            "no_verdict_r0": sum(bool(x[2].get("r0_no_verdict")) for x in inst.values()) if cond == "drea" else "",
+            "no_verdict_final": sum(x[1] is None for x in inst.values()),
+            "errors": sum(bool(x[2].get("error")) for x in inst.values()),
             "McNemar_p": round(mcnemar_p(fixed, broken), 4) if cond != "drea" else "",
             "LHR": round(lhr, 3) if lhr is not None else "n/a",
             "extra_main_tok/inst": round(extra_main / n) if n else 0,
@@ -191,7 +232,7 @@ def main() -> None:
         m = sum(a for a, _ in r0_tok) / len(r0_tok)
         e = sum(b for _, b in r0_tok) / len(r0_tok)
         print(f"DREA round 0 per instance: {m:,.0f} Planner + {e:,.0f} Explorer tokens "
-              f"(${cost(m, e):.3f} at the given prices)")
+              f"(${cost(m, e):.3f} at ${args.price_main}/1M list price; caching makes it lower)")
 
 
 if __name__ == "__main__":

@@ -5,7 +5,8 @@
   everyone gets the same split.
 - --build clones missing repositories (blobless, fast) and builds the pairs.
 - Skips any (pair, type) whose logs already exist for the requested conditions,
-  so a crashed or interrupted batch can simply be re-run.
+  so a crashed or interrupted batch can simply be re-run. A pair whose last
+  run hit an error is run again (from round 0).
 - --workers runs several pairs in parallel (each in its own process).
 
 Examples (run from the code/ folder):
@@ -67,16 +68,57 @@ def ensure_built(item: dict, repos: Path, dataset: Path) -> None:
     print(f"built {pair_name(item)}")
 
 
+def pick_run(base: Path) -> tuple[str | None, dict[str, Path]]:
+    """The run (timestamp) to use for one pair/type/model folder.
+
+    All conditions of one feedback_loop.py call share a timestamp and the same
+    round 0, so we always read files from ONE run (keeps comparisons paired).
+    Picks the run with the most condition files; ties go to the newest.
+    """
+    runs: dict[str, dict[str, Path]] = {}
+    if not base.is_dir():
+        return None, {}
+    for label_dir in base.iterdir():
+        if label_dir.is_dir():
+            for f in label_dir.glob("*.rounds.json"):
+                runs.setdefault(f.name.split(".")[0], {})[label_dir.name] = f
+    runs = {ts: files for ts, files in runs.items() if "drea" in files}
+    if not runs:
+        return None, {}
+    ts = max(runs, key=lambda t: (len(runs[t]), t))
+    return ts, runs[ts]
+
+
+def run_has_error(files: dict[str, Path]) -> bool:
+    for label, f in files.items():
+        try:
+            s = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return True
+        if label == "drea":
+            if s["rounds"][0].get("error"):
+                return True
+        elif s.get("stop_reason") == "error":
+            return True
+    return False
+
+
 def already_done(pair: str, task_type: str, model: str, conditions: list[str]) -> bool:
-    base = HERE / "logs" / pair / task_type / model
+    """Done = one run has every requested condition and none of them errored.
+
+    A run with an error is redone from round 0 (whole pair/type), so all
+    conditions still share the same round 0.
+    """
+    _, files = pick_run(HERE / "logs" / pair / task_type / model)
     labels = ["drea"] + conditions
-    return all(any((base / label).glob("*.rounds.json")) for label in labels)
+    return all(label in files for label in labels) and not run_has_error(files)
 
 
 def run_one(pair: str, task_type: str, args, conditions: list[str]) -> tuple[str, int, float]:
     cmd = [sys.executable, str(HERE / "feedback_loop.py"), pair, "--type", task_type,
            "--model", args.model, "--max-rounds", str(args.max_rounds),
            "--dataset-dir", str(args.dataset_dir),
+           "--recursion-limit", str(args.recursion_limit),
            "--conditions", ",".join(conditions) if conditions else "none"]
     log_dir = HERE / "logs" / "_batch"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -95,6 +137,8 @@ def main() -> None:
     p.add_argument("--types", default="vul,sec")
     p.add_argument("--conditions", default="self_refine,explore,verified,filter")
     p.add_argument("--max-rounds", type=int, default=2)
+    p.add_argument("--recursion-limit", type=int, default=200,
+                   help="Agent step limit per turn (raise it if runs stop with GraphRecursionError)")
     p.add_argument("--workers", type=int, default=2)
     p.add_argument("--build", action="store_true", help="Clone and build missing pairs")
     p.add_argument("--jsonl", type=Path, default=DEFAULT_JSONL)

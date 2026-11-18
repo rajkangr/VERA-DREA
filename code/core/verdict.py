@@ -60,10 +60,33 @@ class ParsedAssessment:
                 out.append(Claim(f"C{len(out) + 1}", label, text))
         return out
 
+    def srr(self) -> dict[str, Any]:
+        """Structured Reasoning Record fields used for lucky-hit analysis.
+
+        Derived from DREA's own XML (no prompt change), so round 0 stays the
+        unmodified DREA baseline:
+          cwe                  first CWE id in <type>
+          root_cause_function  function named in <location>
+          claims               the checkable claims (see claims())
+          assumptions          trigger-path steps that name functions; the
+                               verifier decides whether they were checked
+        """
+        vul = self.verdict == "VULNERABLE"
+        claims = self.claims()
+        return {
+            "cwe": extract_cwe(self.fields.get("type")) if vul else None,
+            "root_cause_function": extract_function(self.fields.get("location")) if vul else None,
+            "location": self.fields.get("location") if vul else None,
+            "claims": [asdict(c) for c in claims],
+            "assumptions": [asdict(c) for c in claims
+                            if c.field.startswith("trigger_path/") and "(" in c.text],
+        }
+
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         d.pop("raw_text", None)
         d["claims"] = [asdict(c) for c in self.claims()]
+        d["srr"] = self.srr()
         return d
 
 
@@ -73,16 +96,64 @@ def _last_tag(text: str, tag: str) -> str | None:
     return matches[-1].strip() if matches else None
 
 
+def normalize_verdict(raw: str | None) -> str | None:
+    """Map the text inside <security_assessment> to VULNERABLE, SECURE or None.
+
+    The old check (`"VULNERABLE" in raw`) read "NOT VULNERABLE" as VULNERABLE
+    and "INSECURE" as SECURE. Now: an exact word wins; negations and
+    "INSECURE" are handled; anything ambiguous (both words) is None.
+    """
+    words = re.sub(r"[^A-Z ]+", " ", (raw or "").upper()).split()
+    text = " ".join(words)
+    if text in ("VULNERABLE", "SECURE"):
+        return text
+    if re.search(r"\b(NOT|NON) VULNERABLE\b", text) or "NOT INSECURE" in text:
+        return "SECURE"
+    if re.search(r"\bNOT SECURE\b", text) or "INSECURE" in words:
+        return "VULNERABLE"
+    has_vul, has_sec = "VULNERABLE" in words, "SECURE" in words
+    if has_vul and not has_sec:
+        return "VULNERABLE"
+    if has_sec and not has_vul:
+        return "SECURE"
+    return None
+
+
+CWE_RE = re.compile(r"CWE[\s_-]*(\d+)", re.I)
+
+
+def extract_cwe(type_text: str | None) -> str | None:
+    """First CWE id in <type>, normalized to 'CWE-<n>'."""
+    m = CWE_RE.search(type_text or "")
+    return f"CWE-{int(m.group(1))}" if m else None
+
+
+def extract_function(location: str | None) -> str | None:
+    """Best guess at the function named in <location>.
+
+    Handles 'file.py: func()', 'func() in file.py', 'def func', 'Class.method',
+    and 'function `func`'. Returns the bare name (last part of a dotted name).
+    """
+    text = location or ""
+    patterns = [
+        r"\bdef\s+([A-Za-z_]\w*)",
+        r"`([A-Za-z_][\w.]*)\s*\(?\)?`",
+        r"([A-Za-z_][\w.]*)\s*\(",
+        r"\b(?:function|method)\s+`?([A-Za-z_][\w.]*)",
+        r"\.py\s*[:,]{1,2}\s*(?:line\s*\d+\s*[,:]?\s*)?`?([A-Za-z_][\w.]*)",
+    ]
+    for pat in patterns:
+        m = re.search(pat, text)
+        if m:
+            name = m.group(1).rstrip(".").split(".")[-1]
+            if name and not name.endswith("py") and name.lower() not in {"line", "in", "the"}:
+                return name
+    return None
+
+
 def parse_assessment(text: str) -> ParsedAssessment:
     text = text or ""
-    verdict_raw = _last_tag(text, "security_assessment") or ""
-    verdict_raw = verdict_raw.upper()
-    if "VULNERABLE" in verdict_raw:
-        verdict = "VULNERABLE"
-    elif "SECURE" in verdict_raw:
-        verdict = "SECURE"
-    else:
-        verdict = None
+    verdict = normalize_verdict(_last_tag(text, "security_assessment"))
 
     fields = {}
     for tag in ALL_TAGS:

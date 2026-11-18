@@ -44,6 +44,45 @@ Then add these two tags:
 If nothing changed, say why your analysis holds.</revision_note>
 """.strip()
 
+# Added to every feedback round (all three conditions get the same sentence,
+# so it does not favor any condition). Round 0 is NOT changed: it stays the
+# unmodified DREA baseline. Purpose: the Nov 16 dev runs called every patched
+# version VULNERABLE; follow-up rounds should not assume a bug must exist.
+NEUTRAL_NOTE = """
+Keep in mind: the code under review may be the vulnerable version or an
+already-patched version, and both are common. Do not assume a vulnerability
+must exist. If a protection blocks the attack path, SECURE is the right answer.
+""".strip()
+
+# Sent when a reply has no parseable <security_assessment> verdict (round 0
+# included). Same message for every condition and for the DREA baseline, so
+# no condition gets credit just for producing a readable answer.
+FORMAT_REASK = """
+Your last reply did not include a final assessment in the required XML format
+(no <security_assessment>VULNERABLE</security_assessment> or
+<security_assessment>SECURE</security_assessment> tag was found).
+
+Do not call any tools and do not start a new investigation. Based only on what
+you have already found, give your final assessment now in EXACTLY the XML
+format from your instructions:
+- VULNERABLE: <security_assessment>, <vulnerability> (type, location, root_cause),
+  <trigger_path> (source, propagation, sink), and <evidence>.
+- SECURE: <security_assessment> and <security_analysis> (checked_operations,
+  validation_evidence).
+{revision_tags}
+""".strip()
+
+REVISION_TAGS_REMINDER = """
+Then add <revision_status>CONFIRMED | REVISED | REVERSED</revision_status> and
+<revision_note>...</revision_note> as before.
+""".strip()
+
+
+def build_format_reask(feedback_round: bool) -> str:
+    return FORMAT_REASK.format(
+        revision_tags=REVISION_TAGS_REMINDER if feedback_round else ""
+    ).strip()
+
 
 # ---------------------------------------------------------------------------
 # Condition 1: Self-Refine (no new evidence)
@@ -73,6 +112,8 @@ Constraints:
 - Do NOT call the `task` tool or delegate to the explore subagent in this round.
 - Change your verdict only if your own feedback shows it cannot be supported.
 
+{neutral_note}
+
 {output_reminder}
 """.strip()
 
@@ -90,6 +131,8 @@ Before finalizing, double-check your analysis against the repository.
 - Then decide whether your assessment still holds.
 - Change your verdict only if the evidence shows the original conclusion
   cannot be supported.
+
+{neutral_note}
 
 {output_reminder}
 """.strip()
@@ -128,6 +171,8 @@ Summary: {n_supported} supported, {n_contradicted} contradicted, {n_unresolved} 
 5. Name the specific missing or bypassed check. Do not fall back on a generic
    "insufficient input validation" explanation.
 
+{neutral_note}
+
 {output_reminder}
 """.strip()
 
@@ -147,13 +192,15 @@ def _clip(text: str, limit: int = 400) -> str:
 
 def build_self_refine(round_idx: int, max_rounds: int) -> str:
     return SELF_REFINE.format(
-        round=round_idx, max_rounds=max_rounds, output_reminder=OUTPUT_REMINDER
+        round=round_idx, max_rounds=max_rounds, output_reminder=OUTPUT_REMINDER,
+        neutral_note=NEUTRAL_NOTE,
     )
 
 
 def build_explore_more(round_idx: int, max_rounds: int) -> str:
     return EXPLORE_MORE.format(
-        round=round_idx, max_rounds=max_rounds, output_reminder=OUTPUT_REMINDER
+        round=round_idx, max_rounds=max_rounds, output_reminder=OUTPUT_REMINDER,
+        neutral_note=NEUTRAL_NOTE,
     )
 
 
@@ -186,4 +233,5 @@ def build_verified(round_idx: int, max_rounds: int, audit) -> str:
         n_unresolved=counts["UNRESOLVED"],
         claim_blocks="\n\n".join(blocks),
         output_reminder=OUTPUT_REMINDER,
+        neutral_note=NEUTRAL_NOTE,
     )
