@@ -50,22 +50,33 @@ def pair_name(item: dict) -> str:
     return f"{item['project_name']}_{item['id']}"
 
 
-def ensure_built(item: dict, repos: Path, dataset: Path) -> None:
-    if (dataset / pair_name(item)).is_dir():
-        return
+def ensure_built(item: dict, repos: Path, dataset: Path) -> bool:
+    """Clone + build one pair. Returns False (and keeps going) if it fails."""
+    if (dataset / pair_name(item) / "vul_meta.json").is_file() and \
+            (dataset / pair_name(item) / "sec_meta.json").is_file():
+        return True
     owner, name = item["repo_url"].rstrip("/").split("/")[-2:]
     repo_dir = repos / owner / name
     if not repo_dir.exists():
         repo_dir.parent.mkdir(parents=True, exist_ok=True)
         print(f"cloning {item['repo_url']} ...")
-        subprocess.run(["git", "clone", "-q", "--filter=blob:none", item["repo_url"],
-                        str(repo_dir)], check=True)
+        try:
+            subprocess.run(["git", "clone", "-q", "--filter=blob:none", item["repo_url"],
+                            str(repo_dir)], check=True)
+        except subprocess.CalledProcessError as exc:
+            print(f"BUILD FAILED {pair_name(item)}: git clone: {exc}")
+            return False
     spec = importlib.util.spec_from_file_location(
         "build_paired_dataset", ROOT / "data" / "scripts" / "build_paired_dataset.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    module.write_pair(item, repos, dataset)
+    try:
+        module.write_pair(item, repos, dataset)
+    except Exception as exc:  # one bad pair must not stop the whole batch
+        print(f"BUILD FAILED {pair_name(item)}: {type(exc).__name__}: {exc}")
+        return False
     print(f"built {pair_name(item)}")
+    return True
 
 
 def pick_run(base: Path) -> tuple[str | None, dict[str, Path]]:
@@ -168,7 +179,7 @@ def main() -> None:
             if already_done(pair_name(item), t, args.model, conditions):
                 print(f"skip (done): {pair_name(item)}/{t}")
                 continue
-            if not (args.dataset_dir / pair_name(item)).is_dir():
+            if not (args.dataset_dir / pair_name(item) / f"{t}_meta.json").is_file():
                 print(f"skip (not built, use --build): {pair_name(item)}")
                 continue
             jobs.append((pair_name(item), t))

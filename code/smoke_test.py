@@ -4,7 +4,8 @@ It builds a tiny fake repository with a path-traversal bug, scripts the
 Planner's answers, and checks that every condition runs, logs, and stops for
 the right reason. It also checks (added Nov 18): the format re-ask when a reply
 has no verdict, one retry after an API error, the verdict parser, the
-evidence gate, and that run_batch skips finished pairs. Run:
+evidence gate, that run_batch skips finished pairs, and (Nov 21) that the
+dataset builder handles symlinks. Run:
 
     uv run smoke_test.py
 """
@@ -173,6 +174,33 @@ def main() -> None:
     good = run_batch.already_done("demo_deadbeef", "vul", "fake-model",
                                   ["self_refine", "explore", "verified", "filter"])
     print(f"{'PASS' if good else 'FAIL'} run_batch skips a finished, error-free pair")
+    ok &= good
+    # Dataset builder: symlinks become small text files (Windows-safe).
+    import importlib.util, subprocess as sp
+    spec = importlib.util.spec_from_file_location(
+        "build_paired_dataset", Path(__file__).resolve().parent.parent / "data" / "scripts" / "build_paired_dataset.py")
+    bpd = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(bpd)
+    src = tmp / "symrepo"
+    (src / "lib").mkdir(parents=True)
+    (src / "lib" / "main.py").write_text("print(1)\n")
+    try:
+        (src / "main.py").symlink_to("lib/main.py")
+        (src / "pkg").symlink_to("lib", target_is_directory=True)
+        made_link = True
+    except OSError:  # Windows without symlink rights: still test plain files
+        made_link = False
+    git = lambda *a: sp.run(["git", *a], cwd=src, check=True, capture_output=True)
+    git("init", "-q"); git("add", "-A")
+    git("-c", "user.email=s@t", "-c", "user.name=smoke", "commit", "-qm", "x")
+    out = tmp / "symout"
+    bpd.checkout_tree(src, "HEAD", out)
+    good = (out / "lib" / "main.py").read_text() == "print(1)\n"
+    if made_link:
+        good &= (out / "main.py").read_text() == "print(1)\n"  # file link -> copy
+        good &= (out / "pkg").read_text().startswith("[symlink in the original repository]")
+    print(f"{'PASS' if good else 'FAIL'} dataset builder copies linked files, notes linked folders"
+          + ("" if made_link else " (symlink part skipped on this OS)"))
     ok &= good
     import subprocess, sys
     res = subprocess.run([sys.executable, "analyze.py", "--model", "fake-model",

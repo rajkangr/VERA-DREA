@@ -4,6 +4,7 @@ import argparse
 import json
 import shutil
 import subprocess
+import tarfile
 from pathlib import Path
 from typing import Any
 
@@ -26,24 +27,103 @@ def git_text(repo: Path, args: list[str]) -> str:
     return result.stdout.strip()
 
 
-def checkout_tree(repo: Path, commit: str, destination: Path) -> None:
+def checkout_tree(repo: Path, commit: str, destination: Path) -> int:
+    """Write the files of `commit` into `destination` (no .git folder).
+
+    Uses Python's tarfile instead of the `tar` program so it behaves the same
+    on Windows, Mac and Linux. Windows cannot create symlinks without admin
+    rights (the `tar` program failed with "Invalid argument" on galaxy), so
+    no symlink is ever created, on any OS, so every dataset is identical:
+      - a symlink to a FILE in the same commit becomes a copy of that file
+        (e.g. galaxy's lib/galaxy/main.py), so the agent can read the code;
+      - a symlink to a folder, or to something missing, becomes a small text
+        file that says where it pointed.
+    Files Windows cannot create (bad characters in the name) are skipped.
+    Returns the number of skipped files.
+    """
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists():
         shutil.rmtree(destination)
-    archive = subprocess.run(
+    destination.mkdir(parents=True, exist_ok=True)
+    root = destination.resolve()
+
+    proc = subprocess.Popen(
         ["git", "archive", "--format=tar", commit],
         cwd=repo,
-        check=True,
         stdout=subprocess.PIPE,
     )
-    destination.mkdir(parents=True, exist_ok=True)
-    extract = subprocess.run(
-        ["tar", "-xf", "-", "-C", str(destination)],
-        input=archive.stdout,
-        check=True,
-    )
-    if extract.returncode != 0:
-        raise RuntimeError(f"Failed to extract archive for {commit}")
+    skipped: list[str] = []
+    links: list[tuple[Path, str]] = []
+    with tarfile.open(fileobj=proc.stdout, mode="r|") as archive:
+        for member in archive:
+            try:
+                target = (destination / member.name).resolve()
+                if root not in target.parents and target != root:
+                    skipped.append(member.name)  # path escapes the folder
+                    continue
+                if member.isdir():
+                    target.mkdir(parents=True, exist_ok=True)
+                elif member.issym() or member.islnk():
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_text(
+                        f"[symlink in the original repository] -> {member.linkname}\n",
+                        encoding="utf-8",
+                    )
+                    links.append((target, member.linkname))
+                elif member.isfile():
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    source = archive.extractfile(member)
+                    with open(target, "wb") as out:
+                        shutil.copyfileobj(source, out)
+            except OSError:
+                skipped.append(member.name)
+    proc.stdout.close()
+    if proc.wait() != 0:
+        raise RuntimeError(f"git archive failed for {commit}")
+    _copy_link_targets(links, root)
+    if skipped:
+        print(f"  note: skipped {len(skipped)} file(s) this OS cannot create, e.g. {skipped[0]}")
+    return len(skipped)
+
+
+NOTE_PREFIX = b"[symlink in the original repository]"
+
+
+def _is_note(path: Path) -> bool:
+    try:
+        with open(path, "rb") as f:
+            return f.read(len(NOTE_PREFIX)) == NOTE_PREFIX
+    except OSError:
+        return False
+
+
+def _copy_link_targets(links: list[tuple[Path, str]], root: Path) -> None:
+    """Replace each symlink note with a copy of the file it pointed to.
+
+    Several passes, so a link to another link also resolves. Links to
+    folders, missing paths or paths outside the tree keep their note.
+    """
+    pending = list(links)
+    for _ in range(5):
+        still = []
+        for note, linkname in pending:
+            try:
+                source = (note.parent / linkname).resolve()
+                inside = root in source.parents
+                if inside and source.is_file() and not _is_note(source):
+                    shutil.copyfile(source, note)
+                elif inside and source.is_file():
+                    still.append((note, linkname))  # points at another link
+            except OSError:
+                pass
+        if len(still) == len(pending):
+            break
+        pending = still
+
+
+def is_built(pair_root: Path) -> bool:
+    """A pair is complete only when both meta files exist (they are written last)."""
+    return (pair_root / "vul_meta.json").is_file() and (pair_root / "sec_meta.json").is_file()
 
 
 def project_dir_name(item: dict[str, Any]) -> str:
