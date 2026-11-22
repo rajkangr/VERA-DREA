@@ -14,7 +14,8 @@ How it works
 4. Each condition gets its own JSONL log (full trace, so DREA's evaluator and
    judge score the FINAL answer) plus a <ts>.rounds.json summary with the
    verdict, revision status, audit, tokens and time for every round.
-5. Robustness (added Nov 18):
+5. Robustness (added Nov 18; Nov 21: the answer is the last reply that
+   contains the verdict XML, not just the last reply):
      - Missing verdict: if a reply has no parseable <security_assessment>, the
        Planner is re-asked ONCE for just the final XML (no tools). This applies
        to round 0 too, so the DREA baseline gets the same chance; the flag
@@ -133,6 +134,7 @@ def run_round(
     start_index = len(trace_data)
     started = time.time()
     final_text = ""
+    verdict_text = ""  # last reply that contains the verdict XML
     error = None
     task_calls = 0
 
@@ -170,6 +172,8 @@ def run_round(
                     text = stringify_content(content)
                     if text:
                         final_text = text
+                        if "<security_assessment>" in text:
+                            verdict_text = text
                     for tool_call in get_tool_calls(last_message):
                         if tool_call.get("name") == "task":
                             task_calls += 1
@@ -192,8 +196,13 @@ def run_round(
                       if e.get("role") == "_usage" and e.get("agent") in (None, "main"))
     sub_tokens = sum(e.get("token_count", 0) for e in new_entries
                      if e.get("role") == "_usage" and e.get("agent") not in (None, "main"))
+    # DeepSeek often writes the full XML report in a message that also calls
+    # a tool (e.g. write_todos), then ends with a short plain-text summary.
+    # The report is the answer, so use the last message that contains the
+    # verdict XML; fall back to the last message (found Nov 21 in the
+    # apkleaks round-0 trace: every "missing verdict" was this case).
     return {
-        "final_text": final_text,
+        "final_text": verdict_text or final_text,
         "main_tokens": main_tokens,
         "explorer_tokens": sub_tokens,
         "explore_calls": task_calls,

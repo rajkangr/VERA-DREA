@@ -110,7 +110,12 @@ def main() -> None:
         # explore: the first call fails (API error) -> retried once on a fresh
         # thread; then explores and confirms
         RuntimeError("simulated 502 from the API"),
-        explore_call("c1"), AIMessage(content=xml_vuln(fake, "CONFIRMED")),
+        # The XML report comes WITH a tool call, then a plain summary (what
+        # DeepSeek really does); the report must still count as the answer.
+        AIMessage(content=xml_vuln(fake, "CONFIRMED"), tool_calls=[{
+            "name": "task", "id": "c1",
+            "args": {"description": "Double-check build_path", "subagent_type": "explore"}}]),
+        AIMessage(content="Summary: the path traversal in download() is confirmed."),
         # verified: r1 explores and fixes the quote; r2 should be skipped (clean)
         explore_call("c2"), AIMessage(content=xml_vuln(real, "REVISED")),
     ]
@@ -148,6 +153,11 @@ def main() -> None:
     explore = json.loads(outputs["explore"].with_suffix("").with_suffix(".rounds.json").read_text())
     good = explore["retried_rounds"] == 1 and explore["stop_reason"] == "model_confirmed"
     print(f"{'PASS' if good else 'FAIL'} API error in explore r1 -> retried once -> {explore['stop_reason']}")
+    ok &= good
+    r1 = explore["rounds"][1]
+    good = r1["verdict"] == "VULNERABLE" and not r1["reasked"]
+    print(f"{'PASS' if good else 'FAIL'} XML report sent with a tool call, then a summary -> "
+          f"verdict {r1['verdict']} without a re-ask")
     ok &= good
     # Evidence gate: clean verified answer passes; a contradicted one is blocked.
     good = verified.get("gated_verdict") == "VULNERABLE" and not verified["gate"]["blocked"]
