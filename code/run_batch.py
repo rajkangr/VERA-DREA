@@ -13,6 +13,7 @@ Examples (run from the code/ folder):
   uv run run_batch.py --split dev --limit 2 --build --model deepseek-v3.2 --conditions none
   uv run run_batch.py --split dev --build --model deepseek-v3.2 --workers 4
   uv run run_batch.py --split test --model deepseek-v3.2 --workers 6
+  uv run run_batch.py --split test --start 20 --limit 20 --model deepseek-v3.2   # test pairs 21-40
 """
 
 from __future__ import annotations
@@ -144,7 +145,9 @@ def main() -> None:
     p.add_argument("--model", required=True)
     p.add_argument("--split", choices=["dev", "test", "all"], default="dev")
     p.add_argument("--ids", default="", help="Comma list of item ids (overrides --split)")
-    p.add_argument("--limit", type=int, default=0, help="Only the first N pairs")
+    p.add_argument("--start", type=int, default=0,
+                   help="Skip the first N pairs of the split (to share test runs: 0, 20, 40, 60)")
+    p.add_argument("--limit", type=int, default=0, help="Only the first N pairs (after --start)")
     p.add_argument("--types", default="vul,sec")
     p.add_argument("--conditions", default="self_refine,explore,verified,filter")
     p.add_argument("--max-rounds", type=int, default=2)
@@ -166,6 +169,8 @@ def main() -> None:
         items = [it for it in items if it["id"] in wanted]
     else:
         items = split_items(items, args.split)
+    if args.start:
+        items = items[args.start:]
     if args.limit:
         items = items[: args.limit]
 

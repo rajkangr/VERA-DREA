@@ -542,7 +542,15 @@ def is_trace_complete(jsonl_path: Path) -> bool:
 
 
 def extract_final_assistant_output(jsonl_path: Path) -> str:
+    """The Planner's final report from a trace.
+
+    VERA-DREA change (Nov 21): DeepSeek often sends the full XML report in a
+    message that also calls a tool, then ends with a short plain summary. The
+    report is the answer, so prefer the last message that contains
+    <security_assessment>; fall back to the last message (DREA's behaviour).
+    """
     last_text = ""
+    last_report = ""
     with jsonl_path.open("r", encoding="utf-8") as handle:
         for line in handle:
             line = line.strip()
@@ -560,15 +568,17 @@ def extract_final_assistant_output(jsonl_path: Path) -> str:
             text = _extract_text_from_content(content, include_thinking=False)
             if text:
                 last_text = text
+                if "<security_assessment>" in text:
+                    last_report = text
             elif not last_text:
                 fallback = _extract_text_from_content(
                     content, include_thinking=True
                 )
                 if fallback:
                     last_text = fallback
-    if not last_text:
+    if not (last_report or last_text):
         raise ValueError(f"No assistant output found in {jsonl_path}")
-    return last_text
+    return last_report or last_text
 
 
 def infer_log_metadata(
