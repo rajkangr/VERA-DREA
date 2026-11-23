@@ -3,7 +3,6 @@
 Usage (from code/):
   uv run check_model.py deepseek-v3.2
   uv run check_model.py gpt-4.1-judge
-  uv run check_model.py gpt-4.1-azure
 
 Costs a fraction of a cent. Prints OK and the model's reply, or the error.
 """

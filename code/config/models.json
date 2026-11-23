@@ -3,8 +3,6 @@
     {"id": "deepseek-v3.2", "backend": "openai_compatible", "model": "deepseek/deepseek-v3.2",
      "base_url_env": "OPENROUTER_BASE_URL", "api_key_env": "OPENROUTER_API_KEY"},
     {"id": "gpt-4.1-judge", "backend": "openai_compatible", "model": "openai/gpt-4.1",
-     "base_url_env": "OPENROUTER_BASE_URL", "api_key_env": "OPENROUTER_API_KEY"},
-    {"id": "gpt-4.1-azure", "backend": "openai_compatible", "model": "gpt-4.1",
-     "base_url_env": "AZURE_OPENAI_BASE_URL", "api_key_env": "AZURE_OPENAI_API_KEY"}
+     "base_url_env": "OPENROUTER_BASE_URL", "api_key_env": "OPENROUTER_API_KEY"}
   ]
 }

@@ -27,6 +27,14 @@ How it works
        or vulnerability claims are CONTRADICTED becomes SECURE in
        `gated_verdict`. analyze.py reports it as the extra row "verified+gate",
        so the ungated result is still available.
+6. Explorer budget (added Nov 23): every FEEDBACK round (all conditions) may
+   spend at most --explorer-budget Explorer tokens (default 500,000). The
+   check runs after each Explorer call finishes, so one call can go past it;
+   once the budget is used up no new Explorer call starts, and the Planner is
+   asked for its final answer without tools (logged as `budget_hit`). This
+   makes `explore` and `verified` get the SAME budget, as the proposal says,
+   and keeps cost per job predictable. Round 0 (the DREA baseline) is not
+   capped, so it stays identical to DREA.
 
 Usage
 -----
@@ -82,6 +90,13 @@ GATE_FIELDS = FILTER_FIELDS  # evidence gate uses the same claim fields
 RETRY_WAIT_SECONDS = int(os.getenv("DREA_RETRY_WAIT", "20"))
 BASE_VERSION = "drea"  # round-0 prompts (unchanged DREA)
 LOG_DIR = Path("logs")
+DEFAULT_EXPLORER_BUDGET = 500_000  # Explorer tokens per feedback round (all conditions)
+BUDGET_WRAPUP = (
+    "The Explorer budget for this round is used up. Do not call any tools and do "
+    "not start a new investigation. Based only on what you have found so far, "
+    "give your final assessment now in EXACTLY the XML format from your "
+    "instructions, including <revision_status> and <revision_note>."
+)
 DATASET_BASE_DIR = Path(os.getenv("DREA_DATASET_DIR", "../dataset"))
 
 
@@ -128,8 +143,16 @@ def run_round(
     trace_data: list[dict[str, Any]],
     jsonl_path: Path,
     recursion_limit: int,
+    explorer_budget: int | None = None,
+    block_tools: bool = False,
 ) -> dict[str, Any]:
-    """Stream one Planner turn. Returns final text, tokens, tool calls, timing."""
+    """Stream one Planner turn. Returns final text, tokens, tool calls, timing.
+
+    explorer_budget: stop the turn (before any new Explorer call) once this
+        turn's Explorer tokens reach it; `budget_hit` is set.
+    block_tools: stop the turn as soon as the Planner tries to call the
+        Explorer (used for the no-tools wrap-up after the budget is used up).
+    """
     tracker = MessageTracker()
     start_index = len(trace_data)
     started = time.time()
@@ -137,6 +160,12 @@ def run_round(
     verdict_text = ""  # last reply that contains the verdict XML
     error = None
     task_calls = 0
+    budget_hit = False
+    blocked_call = False
+
+    def explorer_tokens_so_far() -> int:
+        return sum(e.get("token_count", 0) for e in trace_data[start_index:]
+                   if e.get("role") == "_usage" and e.get("agent") not in (None, "main"))
 
     try:
         for chunk in agent.stream(
@@ -176,10 +205,18 @@ def run_round(
                             verdict_text = text
                     for tool_call in get_tool_calls(last_message):
                         if tool_call.get("name") == "task":
+                            if block_tools:
+                                blocked_call = True
+                                continue
                             task_calls += 1
                             subagent_trace.set_parent_tool_call_id(
                                 tool_call.get("id") or tool_call.get("tool_call_id")
                             )
+            if blocked_call:
+                break  # leave the stream before the blocked Explorer call runs
+            if explorer_budget is not None and explorer_tokens_so_far() >= explorer_budget:
+                budget_hit = True
+                break  # no new Explorer call starts after the budget is used
     except GraphRecursionError as exc:
         error = f"GraphRecursionError: {exc}"
     except Exception as exc:  # keep going with other conditions
@@ -208,6 +245,7 @@ def run_round(
         "explore_calls": task_calls,
         "seconds": round(time.time() - started, 2),
         "error": error,
+        "budget_hit": budget_hit,
     }
 
 
@@ -227,6 +265,7 @@ def run_turn(
     jsonl_path: Path,
     recursion_limit: int,
     feedback_round: bool,
+    explorer_budget: int | None = None,
 ) -> tuple[dict[str, Any], str]:
     """One Planner turn, plus at most one retry and at most one format re-ask.
 
@@ -237,10 +276,14 @@ def run_turn(
         fresh thread if the first attempt errors.
     Returns (run, thread_id_used). Tokens and time of every attempt are summed
     into `run`, so cost numbers include retries and re-asks.
+    explorer_budget: cap on Explorer tokens for this turn (None = no cap; round
+        0 is never capped). When it is used up, the Planner gets one no-tools
+        wrap-up message asking for its final answer.
     """
     run = run_round(agent, subagent_trace,
                     {"messages": list(first_messages) + [new_message]},
-                    thread_id, trace_data, jsonl_path, recursion_limit)
+                    thread_id, trace_data, jsonl_path, recursion_limit,
+                    explorer_budget=explorer_budget)
     run.update(retried=False, first_error=None, reasked=False,
                no_verdict_before_reask=False, reask_error=None)
     used_thread = thread_id
@@ -252,10 +295,25 @@ def run_turn(
         used_thread = f"{thread_id}-retry"
         run = run_round(agent, subagent_trace,
                         {"messages": list(retry_prior) + [new_message]},
-                        used_thread, trace_data, jsonl_path, recursion_limit)
+                        used_thread, trace_data, jsonl_path, recursion_limit,
+                        explorer_budget=explorer_budget)
         _merge_cost(run, first)
         run.update(retried=True, first_error=first["error"], reasked=False,
                    no_verdict_before_reask=False, reask_error=None)
+
+    budget_hit = bool(run.get("budget_hit"))
+    if budget_hit and not run["error"]:
+        log_user(BUDGET_WRAPUP, trace_data, jsonl_path)
+        wrap = run_round(agent, subagent_trace,
+                         {"messages": [HumanMessage(content=BUDGET_WRAPUP)]},
+                         used_thread, trace_data, jsonl_path, recursion_limit,
+                         block_tools=True)
+        _merge_cost(run, wrap)
+        if parse_assessment(wrap["final_text"]).verdict is not None:
+            run["final_text"] = wrap["final_text"]
+        print(f"  $ explorer budget used up ({run['explorer_tokens']:,} tokens); "
+              f"asked for the final answer -> {parse_assessment(run['final_text']).verdict}")
+    run["budget_hit"] = budget_hit
 
     if not run["error"] and parse_assessment(run["final_text"]).verdict is None:
         run["no_verdict_before_reask"] = True
@@ -263,7 +321,8 @@ def run_turn(
         log_user(reask, trace_data, jsonl_path)
         fix = run_round(agent, subagent_trace,
                         {"messages": [HumanMessage(content=reask)]},
-                        used_thread, trace_data, jsonl_path, recursion_limit)
+                        used_thread, trace_data, jsonl_path, recursion_limit,
+                        block_tools=True)
         _merge_cost(run, fix)
         run["reasked"] = True
         run["reask_error"] = fix["error"]
@@ -305,6 +364,7 @@ def round_summary(idx: int, run: dict, message: str | None, audit=None) -> dict:
         "reasked": run.get("reasked", False),
         "no_verdict_before_reask": run.get("no_verdict_before_reask", False),
         "reask_error": run.get("reask_error"),
+        "budget_hit": run.get("budget_hit", False),
         "final_text": run["final_text"],
     }
 
@@ -387,6 +447,7 @@ def run_project(
     dataset_dir: Path,
     recursion_limit: int,
     verify_fn=None,
+    explorer_budget: int | None = DEFAULT_EXPLORER_BUDGET,
 ) -> dict[str, Path]:
     verify_fn = verify_fn or verifier_module.verify
     pair_dir = dataset_dir / project_name
@@ -469,7 +530,7 @@ def run_project(
             run, thread = run_turn(agent, subagent_trace,
                                    prior if k == 1 else [], prior, new_msg, thread,
                                    trace_data, jsonl, recursion_limit,
-                                   feedback_round=True)
+                                   feedback_round=True, explorer_budget=explorer_budget)
             info = round_summary(k, run, message, audit)
             rounds.append(info)
             print(f"[{cond} r{k}] verdict={info['verdict']} status={info['revision_status']} "
@@ -499,6 +560,8 @@ def run_project(
             "errors": [r["error"] for r in done[1:] if r.get("error")],
             "retried_rounds": sum(bool(r.get("retried")) for r in done[1:]),
             "reasked_rounds": sum(bool(r.get("reasked")) for r in done[1:]),
+            "explorer_budget": explorer_budget,
+            "budget_hit_rounds": sum(bool(r.get("budget_hit")) for r in done[1:]),
             "rounds": rounds,
         }
         if gate is not None:
@@ -522,6 +585,9 @@ def main() -> None:
     parser.add_argument("--max-rounds", type=int, default=2)
     parser.add_argument("--dataset-dir", type=Path, default=DATASET_BASE_DIR)
     parser.add_argument("--recursion-limit", type=int, default=200)
+    parser.add_argument("--explorer-budget", type=int, default=DEFAULT_EXPLORER_BUDGET,
+                        help="Max Explorer tokens per feedback round, same for every "
+                             "condition (0 = no cap). Round 0 is never capped.")
     args = parser.parse_args()
 
     conds = [] if args.conditions.strip().lower() == "none" else [
@@ -531,7 +597,8 @@ def main() -> None:
         parser.error(f"Unknown condition(s): {bad}. Choose from {CONDITIONS} or 'none'.")
 
     run_project(args.project_name, args.type, args.model, conds, args.max_rounds,
-                args.dataset_dir, args.recursion_limit)
+                args.dataset_dir, args.recursion_limit,
+                explorer_budget=args.explorer_budget or None)
 
 
 if __name__ == "__main__":

@@ -131,6 +131,7 @@ def run_one(pair: str, task_type: str, args, conditions: list[str]) -> tuple[str
            "--model", args.model, "--max-rounds", str(args.max_rounds),
            "--dataset-dir", str(args.dataset_dir),
            "--recursion-limit", str(args.recursion_limit),
+           "--explorer-budget", str(args.explorer_budget),
            "--conditions", ",".join(conditions) if conditions else "none"]
     log_dir = HERE / "logs" / "_batch"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -153,6 +154,9 @@ def main() -> None:
     p.add_argument("--max-rounds", type=int, default=2)
     p.add_argument("--recursion-limit", type=int, default=200,
                    help="Agent step limit per turn (raise it if runs stop with GraphRecursionError)")
+    p.add_argument("--explorer-budget", type=int, default=500_000,
+                   help="Max Explorer tokens per feedback round, same for every condition "
+                        "(0 = no cap). Round 0 (DREA) is never capped.")
     p.add_argument("--workers", type=int, default=2)
     p.add_argument("--build", action="store_true", help="Clone and build missing pairs")
     p.add_argument("--jsonl", type=Path, default=DEFAULT_JSONL)

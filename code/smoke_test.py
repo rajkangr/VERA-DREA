@@ -5,7 +5,7 @@ Planner's answers, and checks that every condition runs, logs, and stops for
 the right reason. It also checks (added Nov 18): the format re-ask when a reply
 has no verdict, one retry after an API error, the verdict parser, the
 evidence gate, that run_batch skips finished pairs, and (Nov 21) that the
-dataset builder handles symlinks. Run:
+dataset builder handles symlinks, and (Nov 23) the Explorer budget. Run:
 
     uv run smoke_test.py
 """
@@ -212,6 +212,36 @@ def main() -> None:
     print(f"{'PASS' if good else 'FAIL'} dataset builder copies linked files, notes linked folders"
           + ("" if made_link else " (symlink part skipped on this OS)"))
     ok &= good
+    # Explorer budget (Nov 23): a feedback round stops calling the Explorer
+    # once its budget is used, then the Planner must answer without tools.
+    # Script: round 0 answers directly; explore r1 calls the Explorer once
+    # (1,000 tokens > budget 500) -> wrap-up; the Planner tries ANOTHER
+    # Explorer call there (blocked) -> re-ask -> final answer.
+    budget_script = [
+        AIMessage(content=xml_vuln(real)),
+        explore_call("b1"),
+        explore_call("b2"),
+        AIMessage(content=xml_vuln(real, "CONFIRMED")),
+    ]
+    main_b = FakeToolModel(messages=Script(budget_script))
+    sub_b = FakeToolModel(messages=itertools.cycle([AIMessage(
+        content="build_path joins BASE and name with no checks.",
+        response_metadata={"token_usage": {"prompt_tokens": 900, "completion_tokens": 100,
+                                           "total_tokens": 1000}})]))
+    agent_builder.build_models = lambda main_model_id=None, skip_sub=False: (main_b, sub_b)
+    out_b = feedback_loop.run_project(
+        "demo_deadbeef", "vul", "fake-model-budget", ["explore"], max_rounds=1,
+        dataset_dir=tmp / "dataset", recursion_limit=50, explorer_budget=500,
+    )
+    sb = json.loads(out_b["explore"].with_suffix("").with_suffix(".rounds.json").read_text())
+    r1b = sb["rounds"][1]
+    good = (r1b["budget_hit"] and r1b["explore_calls"] == 1 and r1b["reasked"]
+            and r1b["verdict"] == "VULNERABLE" and sb["budget_hit_rounds"] == 1)
+    print(f"{'PASS' if good else 'FAIL'} explorer budget: stopped after 1 call "
+          f"({r1b['explorer_tokens']} tokens), blocked the next call, answer {r1b['verdict']}")
+    if not good:
+        print({k: r1b.get(k) for k in ("budget_hit", "explore_calls", "reasked", "verdict", "error")})
+    ok &= bool(good)
     import subprocess, sys
     res = subprocess.run([sys.executable, "analyze.py", "--model", "fake-model",
                           "--logs", str(tmp / "logs"), "--out", str(tmp / "results")],
