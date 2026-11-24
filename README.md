@@ -123,8 +123,8 @@ OpenRouter account, and writes one report section.
 
 ### Tamanna: evaluation and results (away Wed Nov 25 - Mon Nov 30)
 - [ ] **Tue Nov 24:** send Saksham your share (budget table).
-- [ ] **Tue Nov 24:** set up the repo on your laptop (see Setup), smoke test ALL PASS.
-- [ ] **Tue Nov 24:** lucky-hit rate on the dev results (a script added to `analyze.py`
+- [x] **Tue Nov 24:** set up the repo on your laptop (see Setup), smoke test ALL PASS.
+- [x] **Tue Nov 24:** lucky-hit rate on the dev results (a script added to `analyze.py`
       or a notebook): compare `pred_cwe` and `pred_function` in
       `code/results/instances_*.csv` with RepoPairBench's labels
       (`data/repopairbench_100.jsonl`: `cwe_ids`, `vuln_data`). Wrong CWE or wrong
