@@ -26,6 +26,9 @@ Added Nov 18:
     Prompt caching makes the real bill lower; check OpenRouter's Activity page.
   - instances_*.csv now has pred_cwe and pred_function (from the final
     answer's <type> and <location>) for the lucky-hit analysis.
+Added Nov 24: pred_function is re-extracted from the saved answer text with the
+  fixed extractor, and pred_location holds the raw <location> text, so a
+  function can be checked even when the extractor can't pick one name.
 """
 
 from __future__ import annotations
@@ -36,6 +39,7 @@ import json
 from math import comb
 from pathlib import Path
 
+from core.verdict import parse_assessment
 from run_batch import DEFAULT_JSONL, load_items, pair_name, pick_run, split_items
 
 HERE = Path(__file__).resolve().parent
@@ -52,10 +56,17 @@ def final_srr(summary: dict, label: str) -> dict:
         return {}
     if label == "filter" and summary.get("stop_reason") == "discarded":
         return {}
+    # Re-parse the answer text so fixes to the extractors (core/verdict.py)
+    # apply to old logs too; also keep the raw <location> text (Nov 24).
     rounds = [r for r in summary.get("rounds", []) if "parsed" in r]
     for r in reversed(rounds):
         if r.get("verdict"):
-            return (r["parsed"] or {}).get("srr") or {}
+            parsed = parse_assessment(r.get("final_text") or "")
+            if parsed.verdict is None:
+                return (r["parsed"] or {}).get("srr") or {}
+            srr = parsed.srr()
+            srr["location"] = parsed.fields.get("location")
+            return srr
     return {}
 
 
@@ -170,6 +181,7 @@ def main() -> None:
                                  "final": final, "correct": correct(t, final),
                                  "pred_cwe": srr.get("cwe"),
                                  "pred_function": srr.get("root_cause_function"),
+                                 "pred_location": " ".join((srr.get("location") or "").split())[:300],
                                  "reasoning": r.get("reasoning"), "stop": r.get("stop"),
                                  "r0_no_verdict": r.get("r0_no_verdict", False),
                                  "error": r.get("error", False)})

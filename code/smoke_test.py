@@ -5,7 +5,7 @@ Planner's answers, and checks that every condition runs, logs, and stops for
 the right reason. It also checks (added Nov 18): the format re-ask when a reply
 has no verdict, one retry after an API error, the verdict parser, the
 evidence gate, that run_batch skips finished pairs, and (Nov 21) that the
-dataset builder handles symlinks, and (Nov 23) the Explorer budget. Run:
+dataset builder handles symlinks, (Nov 23) the Explorer budget, and (Nov 24) reverify.py. Run:
 
     uv run smoke_test.py
 """
@@ -252,6 +252,27 @@ def main() -> None:
     if not table_ok:
         print(res.stdout, res.stderr)
     ok &= table_ok
+    from core.verdict import extract_function
+    cases = {"views.py, lines 45-60 (loginForm)": "loginForm",
+             "static.py - Parser.__call__ method": "__call__",
+             "settings.py, LoadSettingsFile function": "LoadSettingsFile",
+             "views.py: panel_export and helper": "panel_export",
+             "views.py, lines 10-30": None}
+    got = {k: extract_function(k) for k in cases}
+    fn_ok = got == cases
+    print(f"{'PASS' if fn_ok else 'FAIL'} function extractor skips words like 'lines' and 'and'")
+    if not fn_ok:
+        print(got)
+    ok &= fn_ok
+    res = subprocess.run([sys.executable, "reverify.py", "--model", "fake-model", "--split", "any",
+                          "--logs", str(tmp / "logs"), "--dataset-dir", str(tmp / "dataset"),
+                          "--out", str(tmp / "results")], capture_output=True, text=True)
+    rv_ok = (res.returncode == 0 and "filter, NEW verifier" in res.stdout
+             and "verified+gate, NEW verifier" in res.stdout)
+    print(f"{'PASS' if rv_ok else 'FAIL'} reverify.py re-checked the saved answers")
+    if not rv_ok:
+        print(res.stdout[-2000:], res.stderr[-2000:])
+    ok &= rv_ok
     print("\nALL PASS" if ok else "\nSOME CHECKS FAILED")
     shutil.rmtree(tmp, ignore_errors=True)
 

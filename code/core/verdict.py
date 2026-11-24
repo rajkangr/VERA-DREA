@@ -128,25 +128,41 @@ def extract_cwe(type_text: str | None) -> str | None:
     return f"CWE-{int(m.group(1))}" if m else None
 
 
+# Words that are not function names but often appear in <location> text.
+_NOT_FUNCS = {
+    "line", "lines", "file", "files", "function", "functions", "method", "methods",
+    "class", "module", "view", "views", "handler", "endpoint", "route", "code", "call",
+    "called", "in", "the", "and", "or", "of", "at", "to", "from", "for", "with", "via",
+    "on", "by", "is", "a", "an", "inside", "within", "where", "which", "when", "then",
+    "py", "python", "see", "near", "around", "approximately", "approx", "line_number",
+}
+
+
 def extract_function(location: str | None) -> str | None:
     """Best guess at the function named in <location>.
 
     Handles 'file.py: func()', 'func() in file.py', 'def func', 'Class.method',
-    and 'function `func`'. Returns the bare name (last part of a dotted name).
+    'function `func`', 'file.py, lines 10-20 (func)' and 'func function'.
+    Returns the bare name (last part of a dotted name). Tries patterns from most
+    to least specific and skips plain words such as 'lines' or 'and' (Nov 24:
+    the first version returned those for about a third of the dev answers).
     """
     text = location or ""
     patterns = [
-        r"\bdef\s+([A-Za-z_]\w*)",
-        r"`([A-Za-z_][\w.]*)\s*\(?\)?`",
-        r"([A-Za-z_][\w.]*)\s*\(",
-        r"\b(?:function|method)\s+`?([A-Za-z_][\w.]*)",
-        r"\.py\s*[:,]{1,2}\s*(?:line\s*\d+\s*[,:]?\s*)?`?([A-Za-z_][\w.]*)",
+        r"\bdef\s+([A-Za-z_]\w*)",                                   # def func
+        r"`([A-Za-z_][\w.]*)\s*(?:\([^`]*\))?`",                       # `func` / `func(x)`
+        r"\b(?:function|method|view|handler|endpoint)\s+`?([A-Za-z_][\w.]*)",  # function func
+        r"([A-Za-z_][\w.]*)\s*\(",                                     # func(
+        r"\b([A-Za-z_][\w.]*)\s+(?:function|method|view|handler|endpoint)\b",  # func function
+        r"\(\s*([A-Za-z_][\w.]*)\s*\)",                                # (func)
+        r"\.py\s*[:,\-]{1,2}\s*([A-Za-z_][\w.]*)",                     # file.py: func
+        r"::\s*([A-Za-z_][\w.]*)",                                     # file.py::func
     ]
     for pat in patterns:
-        m = re.search(pat, text)
-        if m:
+        for m in re.finditer(pat, text):
             name = m.group(1).rstrip(".").split(".")[-1]
-            if name and not name.endswith("py") and name.lower() not in {"line", "in", "the"}:
+            if (len(name) >= 2 and name.lower() not in _NOT_FUNCS
+                    and not name.lower().endswith("py") and not name.isdigit()):
                 return name
     return None
 

@@ -42,7 +42,7 @@ only provider.
 **One shared account (Saksham's).** We keep using Saksham's OpenRouter account
 and his existing key, so there is one balance and one place to see the spending.
 Nobody else needs to sign up:
-1. **Raj, Renan and Tamanna, by Tue Nov 24:** send Saksham your share (see the
+1. **Raj, Renan and Tamanna, by the end of Wed Nov 25:** send Saksham your share (see the
    budget table) so he can add it as credit. Saksham has already put in $35 for
    the setup and dev runs. (Saksham is asking Shayan whether the course can cover
    API credit; if it does, shares go down or get refunded.)
@@ -68,17 +68,41 @@ will tell us the real number.
 | B (if the money isn't there) | 40 (10 each) | 80 | about $48 | about $8 | about **$15** | $13 |
 
 Saksham already paid $35 (about $11.50 of it is still unused and goes toward the
-test runs). **Decision on Wed Nov 25:** Plan A if all three shares for A have
-arrived, otherwise Plan B, and we say so in the report.
+test runs). **Decision (Nov 24): Plan A, all 80 test pairs.** The course has no
+funding for API credit (Shayan, Nov 24), so we split the cost: **$31 each from Raj,
+Renan and Tamanna** (by the end of Wed Nov 25). Plan B (40 pairs) is only an
+emergency fallback, which
+Shayan said is acceptable "with proper justification".
 
-## Status (Mon Nov 23)
+Free options we checked (Nov 24, from Shayan's suggestions):
+- **UMass GenAI platform:** a chat interface; we found no API access, and it
+  doesn't list DeepSeek V3.2 or GPT-4.1, so our pipeline can't call it.
+- **Unity HPC / Google Colab:** can host open-weight models, but not DeepSeek V3.2
+  (671B parameters), and Colab sessions time out long before a 10-hour run. Switching
+  to a smaller model now would mean redoing the dev runs and tuning, and our results
+  would no longer match DREA's setup. We keep the same model for every condition,
+  as Shayan asked.
+
+## Status (Tue Nov 24)
 - Pipeline runs end to end on real RepoPairBench pairs (`saksham-pipeline`).
 - Dev runs done: **11 dev pairs** (dev pairs 1-10 + PyDrive2), all jobs OK.
 - Fixed: verdict parsing (the answer is the message with the XML report, not
   the trailing summary; same fix in the judge), missing-verdict re-ask, API
   retry, Windows dataset build (symlinks), first evidence gate, and (Nov 24)
   the Explorer budget. Smoke test: 15 checks, ALL PASS.
-- Waiting on: Raj's verifier (`raj-verifier` branch is not pushed yet; due Tue Nov 24).
+- Raj's AST verifier is pushed (`raj-verifier`, Tue Nov 24) and merged into
+  `saksham-pipeline`. It has protection checks for SQL injection, command injection,
+  path traversal and SSRF.
+- `uv run reverify.py --split dev` re-checks the saved dev answers with the current
+  verifier for free (no API calls), so we tune the verifier before paying for reruns.
+- Tamanna's lucky-hit script is in (`code/lucky_hits.py`, branch `tamanna-eval`, merged
+  Nov 24): dev lucky-hit rate for DREA is about 30%. She found that `pred_function` was
+  blank or wrong for about a third of answers; the extractor is fixed and the instances
+  CSV now also has the raw `pred_location`.
+- Shares: Raj (Nov 23) and Tamanna (Nov 24) paid. Renan: due by the end of Wed Nov 25.
+- No course funding for API credit (Shayan, Nov 24): we run all 80 test pairs and
+  split the cost (see the budget table). Shayan asked us to keep documenting individual
+  contributions and to tell him about missed deadlines.
 - No TA meeting this week (short Thanksgiving week); the next check-in is after the break.
 - Tamanna is away from Wed Nov 25 until Tue Dec 1; her tasks are scheduled around that.
 
@@ -88,16 +112,24 @@ Plan A, 10 in Plan B) on their own laptop with their own key on the shared
 OpenRouter account, and writes one report section.
 
 ### Raj: verifier
-- [ ] **Tue Nov 24:** push branch `raj-verifier` (made from `saksham-pipeline`) with the
-      MVP checks ported into `code/core/verifier.py`. Use `check_from_code()` so each
-      finding has a failure code, a status and an Explorer request. General checks only,
-      nothing written for one specific pair. `uv run smoke_test.py` must print ALL PASS.
-- [ ] **Tue Nov 24:** send Saksham your share (budget table).
-- [ ] **Wed Nov 25:** put the key he DMs you in `code/.env` and run the smoke test
-      (see "Models and OpenRouter").
-- [ ] **Sat Nov 28:** sanitizer checks for the common Python CWEs (SQLi, command
-      injection, path traversal, SSRF, XSS, deserialization); hand-check 20 verifier
-      flags on the dev logs and fix false alarms.
+- [x] **Tue Nov 24:** pushed `raj-verifier` (AST checks, failure codes, Explorer requests).
+- [x] **Tue Nov 24:** sent his share.
+- [x] **Tue Nov 24:** agreed to merge `raj-verifier` into `saksham-pipeline`.
+- [x] **Tue Nov 24:** got his OpenRouter key (limit $25).
+- [ ] **Wed Nov 25:** put your key in `code/.env`; pull `saksham-pipeline`; run the smoke
+      test and `uv run check_model.py deepseek-v3.2`.
+- [ ] **Wed Nov 25:** get the dev runs onto your laptop for tuning: download
+      `logs_dev_saksham.zip` from the shared Drive, unzip it into `code/logs`, then build
+      the dev pairs (no API calls):
+      `uv run run_batch.py --model deepseek-v3.2 --split dev --limit 10 --build --dry-run`
+      and `uv run run_batch.py --model deepseek-v3.2 --ids 4f4ba85c --build --dry-run`.
+- [ ] **Wed Nov 25 - Fri Nov 27:** tune with Saksham on the dev pairs only. Run
+      `uv run reverify.py --split dev` (free) after every verifier change: the goal is
+      fewer `broken` for `verified+gate` and `filter` without losing correct answers.
+      Hand-check 20 verifier flags in `results/reverify_*.csv` and fix false alarms.
+- [ ] **Sat Nov 28:** protection checks for XSS (CWE-79), unsafe deserialization
+      (CWE-502) and code injection (CWE-94/95), the same way as the existing four;
+      push by Sat evening so it is in the freeze.
 - [ ] **Sun Nov 29 - Wed Dec 2:** your test pairs (see "Shared test runs").
 - [ ] **Sat Dec 5:** draw Figure 1 (the pipeline overview: DREA round 0, verifier,
       targeted Explorer requests, evidence gate) to replace the text box in the proposal.
@@ -105,15 +137,17 @@ OpenRouter account, and writes one report section.
 
 ### Renan: setup, budget, TA check-in and report assembly
 - [x] **Sun Nov 22:** shared Google Drive folder for the logs.
-- [ ] **Tue Nov 24:** send Saksham your share (budget table); collect everyone's
-      shares and confirm in Discord that all three were sent.
+- [ ] **By Wed Nov 25:** send Saksham your share (budget table).
+- [ ] **By Fri Nov 27:** set up the repo on your laptop (pull `saksham-pipeline`, `uv sync`,
+      smoke test ALL PASS), put the key Saksham DMs you in `code/.env`, run
+      `uv run check_model.py deepseek-v3.2`, then one cheap real run (about $0.15):
+      `uv run run_batch.py --model deepseek-v3.2 --ids 193c77fa --types vul --conditions none --build --workers 1`;
+      post "ready" in Discord.
+- [ ] **Fri Nov 27:** post each person's spending in Discord (from the Activity page
+      Saksham shares).
 - [ ] **Mon Nov 30:** TA check-in talking points (1 page): the dev results table, one
       fixed lucky hit, one regression, the test-set size. Email Shayan to set the
       check-in day (Dec 1-4).
-- [ ] **Wed Nov 25:** set up the repo on your laptop (see Setup), smoke test ALL PASS,
-      put the key Saksham DMs you in `code/.env`, and run 1 dev pair to check it works.
-- [ ] **Fri Nov 27:** post each person's spending in Discord (from the Activity page
-      Saksham shares).
 - [ ] **Sun Nov 29 - Wed Dec 2:** your test pairs (see "Shared test runs").
 - [ ] **Mon Dec 7:** report sections "Introduction" and "Related work"
       (DREA, VERA, RepoAudit, Self-Refine, JITVul).
@@ -122,7 +156,7 @@ OpenRouter account, and writes one report section.
 - [ ] **Sun Dec 13:** final read-through; check the page limit and the template.
 
 ### Tamanna: evaluation and results (away Wed Nov 25 - Mon Nov 30)
-- [ ] **Tue Nov 24:** send Saksham your share (budget table).
+- [x] **Tue Nov 24:** sent her share.
 - [x] **Tue Nov 24:** set up the repo on your laptop (see Setup), smoke test ALL PASS.
 - [x] **Tue Nov 24:** lucky-hit rate on the dev results (a script added to `analyze.py`
       or a notebook): compare `pred_cwe` and `pred_function` in
@@ -130,6 +164,8 @@ OpenRouter account, and writes one report section.
       (`data/repopairbench_100.jsonl`: `cwe_ids`, `vuln_data`). Wrong CWE or wrong
       root-cause function = lucky hit. Push it on a branch `tamanna-eval`.
 - [ ] **Tue Dec 1:** put the key Saksham DMs you in `code/.env`; run the smoke test.
+- [ ] **Tue Dec 1:** re-run `uv run lucky_hits.py --split dev` on the fixed instances CSV
+      (Saksham re-ran it on Nov 24; check the numbers).
 - [ ] **Tue Dec 1 - Thu Dec 3:** your test pairs (see "Shared test runs").
 - [ ] **Fri Dec 4:** merge everyone's logs, run `analyze.py --split test`, commit the CSVs.
 - [ ] **Mon Dec 7:** report section "Results": main table, fixed/broken/new FP,
@@ -140,18 +176,24 @@ OpenRouter account, and writes one report section.
       the OpenRouter account, and all dev runs (paid $35 so far).
 - [x] **Sun Nov 22:** finished the 11 dev pairs. Tried Azure for Students for the
       judge (not allowed on student subscriptions).
-- [ ] **Mon Nov 23:** commit the dev results; upload the dev `code/logs` as a zip to
-      the shared Drive; email Shayan about course funding for API credit.
-- [ ] **Tue Nov 24:** Explorer budget (same token budget per feedback round for every
-      condition, as the proposal says); smoke test; push.
-- [ ] **Tue Nov 24 (evening):** add everyone's share as credit; create one key per
-      teammate (limit from the budget table) and DM it to them.
-- [ ] **Wed Nov 25:** decide Plan A or B; merge Raj's verifier; tune on dev pairs only.
+- [ ] **Mon Nov 23:** upload the dev `code/logs` as a zip to the shared Drive.
+- [x] **Mon Nov 23:** Explorer budget (same token budget per feedback round for every
+      condition, as the proposal says); dev results committed; emailed Shayan.
+- [x] **Tue Nov 24:** Raj's key sent (limit $25).
+- [ ] **Tue Nov 24:** merge Raj's verifier and Tamanna's lucky-hit branch; fix the
+      function extractor Tamanna found; add `reverify.py`; free re-check of the dev
+      answers; upload the dev logs zip for Raj.
+- [ ] **Tue Nov 24 (evening):** add Tamanna's share as credit and DM her key (limit $25)
+      before she's offline; Renan's once his share arrives.
+- [ ] **Wed Nov 25:** tune on dev pairs only (with Raj), checking
+      each change with `reverify.py` first; then rerun 2-3 dev pairs in full (about
+      $1-2 each; move their old logs aside first).
 - [ ] **Fri Nov 27:** first GPT-4.1 judge run on the dev logs (`--model gpt-4.1-judge`).
 - [ ] **Sun Nov 29:** freeze the code (`git tag v1-frozen`, `git push --tags`); start
       your test pairs.
 - [ ] **Sat Dec 5:** judge run on all test logs (from the shared Drive); upload the
       judge outputs for Tamanna's results tables.
+- [ ] **Next TA check-in (after the break):** present the pipeline and the dev results.
 - [ ] **Mon Dec 7:** report section "Method" (pipeline, prompts, evidence gate,
       Explorer budget, conditions).
 
@@ -220,6 +262,9 @@ uv run run_batch.py --split dev --build --model deepseek-v3.2 --workers 2
 
 # every feedback round is capped at 500,000 Explorer tokens by default;
 # change it with --explorer-budget N (0 = no cap; round 0 is never capped)
+
+# re-check the saved answers with the current verifier (free, no API calls)
+uv run reverify.py --split dev --dataset-dir ../dataset
 
 # results table (prices default to OpenRouter list prices)
 uv run analyze.py --model deepseek-v3.2 --split dev
