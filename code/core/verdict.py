@@ -13,6 +13,7 @@ We split it into claims the verifier can check one by one.
 
 from __future__ import annotations
 
+import html
 import re
 from dataclasses import asdict, dataclass, field
 from typing import Any
@@ -191,21 +192,59 @@ def parse_assessment(text: str) -> ParsedAssessment:
     )
 
 
-def extract_code_quotes(text: str) -> list[str]:
-    """Code the Planner quoted: fenced blocks and inline `backticks`.
+# Tags the Planner wraps quoted code in (galaxy, Nov 22: a quote inside
+# <code_excerpt> was missed, so the verifier said "quotes no code").
+_CODE_TAGS = ("code_excerpt", "code_snippet", "code", "snippet", "excerpt", "source_code")
+# "Line 83:", "L83:", "lines 10-12:", "83:", "83 |", "503<tab>", "83." in front of a quote
+_LINE_PREFIX = re.compile(
+    r"^(?:(?:lines?|ln|l)\s*\d+(?:\s*[-–]\s*\d+)?\s*[:.)|-]\s*|\d+\s*(?:[:|.)]\s*|\t\s*))",
+    re.IGNORECASE,
+)
+# A comment the model added after the code, e.g. "x = y  # <- vulnerable".
+# Removing a real trailing comment is harmless: the rest is still in the source.
+_TRAILING_COMMENT = re.compile(r"\s+#(?!.*[\"']).*$")
 
-    Returns individual non-trivial lines, which the verifier can look up in
-    the source.
+
+def _clean_quote_line(line: str) -> str:
+    q = html.unescape(line).strip()
+    q = re.sub(r"^[+-](?=\s)", "", q).strip()   # diff markers "+ code" / "- code"
+    q = _LINE_PREFIX.sub("", q).strip()
+    q = _TRAILING_COMMENT.sub("", q).rstrip()
+    q = re.sub(r"\s*(?:\.\.\.|…)$", "", q)      # "foo(bar, ..." -> "foo(bar,"
+    return q.strip()
+
+
+def extract_code_quotes(text: str) -> list[str]:
+    """Code the Planner quoted, in any of the formats it uses.
+
+    Reads ``` and ~~~ fenced blocks (with or without a language name),
+    <code_excerpt>/<code>/<snippet> tags, and inline `backticks`. Each line is
+    cleaned: HTML entities (&lt; &gt;), line-number prefixes ("Line 83:",
+    "503<tab>", "42 |"), diff markers and comments the model added at the end
+    are removed. Returns individual non-trivial lines, which the verifier can
+    look up in the source. (Tuning fix #1, Nov 25.)
     """
+    text = text or ""
+    blocks: list[str] = []
+    rest = text
+    for fence in ("```", "~~~"):
+        pat = re.compile(re.escape(fence) + r"(?:[\w+.-]*[ \t]*\n)?(.*?)" + re.escape(fence), re.DOTALL)
+        blocks.extend(pat.findall(rest))
+        rest = pat.sub("\n", rest)
+    for tag in _CODE_TAGS:
+        pat = re.compile(rf"<{tag}\b[^>]*>(.*?)</{tag}>", re.DOTALL | re.IGNORECASE)
+        blocks.extend(pat.findall(rest))
+        rest = pat.sub("\n", rest)
+
     quotes: list[str] = []
-    for block in re.findall(r"```[\w+-]*\n(.*?)```", text or "", flags=re.DOTALL):
-        quotes.extend(line for line in block.splitlines())
-    for inline in re.findall(r"`([^`\n]{6,})`", text or ""):
-        quotes.append(inline)
-    cleaned = []
+    for block in blocks:
+        quotes.extend(block.splitlines())
+    quotes.extend(re.findall(r"`([^`\n]{6,})`", rest))
+
+    cleaned, seen = [], set()
     for q in quotes:
-        q = q.strip()
-        q = re.sub(r"^\d+\s*[:|]\s*", "", q)  # drop "42: " / "42 | " prefixes
-        if len(q) >= 6 and not q.startswith(("#", "...", "…")):
+        q = _clean_quote_line(q)
+        if len(q) >= 6 and not q.startswith(("#", "...", "…")) and q not in seen:
+            seen.add(q)
             cleaned.append(q)
     return cleaned

@@ -584,10 +584,16 @@ def verify(
         if claim.field in ("evidence", "security_analysis/validation_evidence"):
             quotes = extract_code_quotes(claim.text)
             missing = [q for q in quotes if not _quote_exists(q, target_code, repo)]
-            if quotes and not missing:
+            # Tuning fix #1 (Nov 25): one paraphrased or trimmed line should not
+            # sink a claim whose other quotes are real; CONTRADICT only when
+            # most of the quoted lines are missing from the repository.
+            if quotes and len(missing) * 2 <= len(quotes):
                 check.status = "SUPPORTED"
                 check.finding = (
                     f"All {len(quotes)} quoted code line(s) were found in the repository."
+                    if not missing else
+                    f"{len(quotes) - len(missing)} of {len(quotes)} quoted code lines were "
+                    f"found in the repository (not found: `{missing[0][:120]}`)."
                 )
             elif missing:
                 check.status = "CONTRADICTED"

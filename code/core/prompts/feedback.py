@@ -44,14 +44,27 @@ Then add these two tags:
 If nothing changed, say why your analysis holds.</revision_note>
 """.strip()
 
-# Added to every feedback round (all three conditions get the same sentence,
+# Added to every feedback round (all three conditions get the same text,
 # so it does not favor any condition). Round 0 is NOT changed: it stays the
 # unmodified DREA baseline. Purpose: the Nov 16 dev runs called every patched
 # version VULNERABLE; follow-up rounds should not assume a bug must exist.
+# The "two rules" (tuning fix #4, Nov 25): on the patched dev pairs the model
+# saw the fix every time, then switched to a different bug (apkleaks, ParlAI,
+# bot) or argued the fix was not enough without an input that beats it.
 NEUTRAL_NOTE = """
 Keep in mind: the code under review may be the vulnerable version or an
 already-patched version, and both are common. Do not assume a vulnerability
 must exist. If a protection blocks the attack path, SECURE is the right answer.
+
+Two rules for this round:
+- If the code has a check on the path to the sink you reported (escaping,
+  quoting, an allow-list, a path or host check, a safe loader, a sandbox),
+  keep VULNERABLE only if you give a concrete attacker input that gets past
+  that check and show, with quoted code, why it gets past.
+- Do not switch to a different vulnerability type or a different sink unless
+  you show, with quoted code, attacker-controlled input that reaches the new
+  sink. If you cannot show that, and your original finding does not hold,
+  the answer is SECURE.
 """.strip()
 
 # Sent when a reply has no parseable <security_assessment> verdict (round 0

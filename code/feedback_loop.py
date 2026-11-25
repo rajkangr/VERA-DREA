@@ -9,7 +9,8 @@ How it works
    All conditions therefore start from the identical first analysis (paired
    comparison, and round 0 is paid for only once).
 3. Up to K rounds per condition. A condition stops early when:
-     - verified: the verifier finds no CONTRADICTED/UNRESOLVED claims, or
+     - verified: the verifier finds no CONTRADICTED/UNRESOLVED claims (for a
+       SECURE answer: no CONTRADICTED claim, tuning fix #3), or
      - any condition: the Planner reports <revision_status>CONFIRMED.
 4. Each condition gets its own JSONL log (full trace, so DREA's evaluator and
    judge score the FINAL answer) plus a <ts>.rounds.json summary with the
@@ -390,6 +391,20 @@ def evidence_gate(parsed, workspace, target_code, verify_fn) -> dict:
     }
 
 
+def needs_feedback(parsed, audit) -> bool:
+    """Does a `verified` answer get a feedback round? (Tuning fix #3, Nov 25.)
+
+    VULNERABLE (or no verdict): yes, if any claim is CONTRADICTED or UNRESOLVED.
+    SECURE: only if a claim is CONTRADICTED. An UNRESOLVED finding alone (for
+    example "this claim quotes no code") is not a reason to reopen a SECURE
+    answer: on the dev pairs that only pushed correct SECURE answers on patched
+    code back to VULNERABLE (galaxy).
+    """
+    if parsed.verdict == "SECURE":
+        return any(c.status == "CONTRADICTED" for c in audit.checks)
+    return audit.needs_attention()
+
+
 def run_filter(r0, r0_info, workspace, target_code, verify_fn, jsonl, summary_path,
                project_name, task_type, model_id, trace_data) -> Path:
     """Verify-then-discard baseline (no feedback, no extra LLM calls)."""
@@ -512,8 +527,9 @@ def run_project(
             audit = None
             if cond == "verified":
                 audit = verify_fn(parsed, workspace, target_code)
-                if not audit.needs_attention():
-                    stop_reason = "verifier_clean"
+                if not needs_feedback(parsed, audit):
+                    stop_reason = ("verifier_clean" if not audit.needs_attention()
+                                   else "secure_not_contradicted")
                     rounds.append({"round": k, "skipped": True, "audit_before_round": audit.to_dict()})
                     break
                 message = build_verified(k, max_rounds, audit)

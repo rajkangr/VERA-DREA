@@ -5,7 +5,8 @@ Planner's answers, and checks that every condition runs, logs, and stops for
 the right reason. It also checks (added Nov 18): the format re-ask when a reply
 has no verdict, one retry after an API error, the verdict parser, the
 evidence gate, that run_batch skips finished pairs, and (Nov 21) that the
-dataset builder handles symlinks, (Nov 23) the Explorer budget, and (Nov 24) reverify.py. Run:
+dataset builder handles symlinks, (Nov 23) the Explorer budget, (Nov 24) reverify.py,
+and (Nov 25) tuning fixes #1, #3 and #4. Run:
 
     uv run smoke_test.py
 """
@@ -264,11 +265,54 @@ def main() -> None:
     if not fn_ok:
         print(got)
     ok &= fn_ok
+    # Tuning fix #1 (Nov 25): quotes in every format; CONTRADICT only if most
+    # quoted lines are missing.
+    from core.verdict import extract_code_quotes
+    quote_cases = {
+        "<code_excerpt>\nLine 9: with open(build_path(name)) as f:\n</code_excerpt>":
+            ["with open(build_path(name)) as f:"],
+        "```\n6\treturn os.path.join(BASE, name)  # <- no check\n```":
+            ["return os.path.join(BASE, name)"],
+        "~~~python\n42 | return f.read()\n~~~": ["return f.read()"],
+        "`if a &lt; b:`": ["if a < b:"],
+    }
+    got_q = {k: extract_code_quotes(k) for k in quote_cases}
+    q_ok = got_q == quote_cases
+    two_real_one_fake = xml_vuln(real + "\n    return os.path.join(BASE, name)\n" + fake)
+    audit_q = feedback_loop.verifier_module.verify(parse_assessment(two_real_one_fake), snap, code)
+    ev = [c for c in audit_q.checks if c.field == "evidence"]
+    q_ok &= bool(ev) and ev[0].status == "SUPPORTED"
+    print(f"{'PASS' if q_ok else 'FAIL'} quotes read in every format; 1 missing line of 3 is not a contradiction")
+    if not q_ok:
+        print(got_q, [(c.field, c.status) for c in audit_q.checks])
+    ok &= q_ok
+    # Tuning fix #3: a SECURE answer gets a feedback round only if a claim is
+    # CONTRADICTED (UNRESOLVED alone is not enough).
+    from core.verifier import AuditResult, ClaimCheck
+    sec = parse_assessment("<security_assessment>SECURE</security_assessment>")
+    vul = parse_assessment(xml_vuln(real))
+    unresolved = AuditResult("SECURE", [ClaimCheck("C1", "evidence", "x", "UNRESOLVED")])
+    contradicted = AuditResult("SECURE", [ClaimCheck("C1", "evidence", "x", "CONTRADICTED")])
+    fb_ok = (not feedback_loop.needs_feedback(sec, unresolved)
+             and feedback_loop.needs_feedback(sec, contradicted)
+             and feedback_loop.needs_feedback(vul, unresolved))
+    print(f"{'PASS' if fb_ok else 'FAIL'} SECURE answer: feedback only when a claim is CONTRADICTED")
+    ok &= fb_ok
+    # Tuning fix #4: the "two rules" are in every feedback prompt, not in round 0.
+    from core.prompts.feedback import build_explore_more, build_self_refine, build_verified
+    from core.prompts import get_prompt_set
+    r0_prompt = get_prompt_set(feedback_loop.BASE_VERSION)
+    r0_text = " ".join(str(getattr(r0_prompt, a, "")) for a in ("system", "user"))
+    rules_ok = (all("Two rules for this round" in t for t in (
+        build_self_refine(1, 2), build_explore_more(1, 2), build_verified(1, 2, contradicted)))
+        and "Two rules for this round" not in r0_text)
+    print(f"{'PASS' if rules_ok else 'FAIL'} same-bug rule in all feedback prompts, round 0 unchanged")
+    ok &= rules_ok
     res = subprocess.run([sys.executable, "reverify.py", "--model", "fake-model", "--split", "any",
                           "--logs", str(tmp / "logs"), "--dataset-dir", str(tmp / "dataset"),
                           "--out", str(tmp / "results")], capture_output=True, text=True)
     rv_ok = (res.returncode == 0 and "filter, NEW verifier" in res.stdout
-             and "verified+gate, NEW verifier" in res.stdout)
+             and "verified+gate, NEW verifier" in res.stdout and "(current rule)" in res.stdout)
     print(f"{'PASS' if rv_ok else 'FAIL'} reverify.py re-checked the saved answers")
     if not rv_ok:
         print(res.stdout[-2000:], res.stderr[-2000:])

@@ -8,6 +8,9 @@ spending money on new runs.
 For every pair/type (the same run analyze.py reads) it:
   - runs the verifier on DREA's round-0 answer  -> new `filter` verdict
   - runs the evidence gate on the final `verified` answer -> new `verified+gate`
+  - checks whether `verified` would start a feedback round on the round-0
+    answer with the current rule (tuning fix #3: a SECURE answer only gets one
+    if a claim is CONTRADICTED)
   - counts the verifier's findings by status and failure type
 
 Usage (from code/):
@@ -27,7 +30,7 @@ from pathlib import Path
 
 from core import verifier as verifier_module
 from core.verdict import parse_assessment
-from feedback_loop import FILTER_FIELDS, GATE_FIELDS, resolve_workspace
+from feedback_loop import FILTER_FIELDS, GATE_FIELDS, needs_feedback, resolve_workspace
 from run_batch import DEFAULT_JSONL, load_items, pair_name, pick_run, split_items
 
 HERE = Path(__file__).resolve().parent
@@ -84,6 +87,9 @@ def main() -> None:
             r0 = parse_assessment(answer_text(drea))
             audit0 = verifier_module.verify(r0, workspace, target)
             new_filter = "SECURE" if discard(r0, audit0, FILTER_FIELDS) else r0.verdict
+            ver_rounds = ver.get("rounds", [])
+            feedback_old = len(ver_rounds) > 1 and not ver_rounds[1].get("skipped")
+            feedback_new = needs_feedback(r0, audit0)
 
             fin = parse_assessment(answer_text(ver))
             audit1 = verifier_module.verify(fin, workspace, target)
@@ -99,6 +105,7 @@ def main() -> None:
                 "drea": r0.verdict, "verified": fin.verdict,
                 "filter_old": old_filter, "filter_new": new_filter,
                 "gate_old": ver.get("gated_verdict"), "gate_new": new_gate,
+                "feedback_old": feedback_old, "feedback_new": feedback_new,
                 "contradicted_r0": sum(c.status == "CONTRADICTED" for c in audit0.checks),
                 "contradicted_final": sum(c.status == "CONTRADICTED" for c in audit1.checks),
                 "findings_final": "; ".join(f"[{c.status}] {c.field}: {c.finding}"[:200]
@@ -130,6 +137,13 @@ def main() -> None:
         right, pc, broken = score(col)
         print(f"| {label} | {right}/{len(rows)} | {pc}/{len(pairs)} | {broken} |")
 
+    secure_r0 = [r for r in rows if r["drea"] == "SECURE"]
+    for label, col in [("old run", "feedback_old"), ("current rule", "feedback_new")]:
+        n = sum(bool(r[col]) for r in secure_r0)
+        no_contra = sum(bool(r[col]) and r["contradicted_r0"] == 0 for r in secure_r0)
+        print(f"\nverified, SECURE round-0 answers ({len(secure_r0)}): {n} get a feedback round "
+              f"({label}); {no_contra} of them without a CONTRADICTED claim", end="")
+    print()
     print("\nVerifier findings (round 0 + final answers):", dict(statuses))
     print("Most common failure types:")
     for name, n in failures.most_common(8):
