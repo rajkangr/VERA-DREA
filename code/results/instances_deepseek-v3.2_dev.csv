@@ -1,16 +1,16 @@
 condition,pair,type,initial,final,correct,pred_cwe,pred_function,pred_location,reasoning,stop,r0_no_verdict,error
-drea,apkleaks_193c77fa,vul,VULNERABLE,VULNERABLE,True,CWE-78,decompile,apkleaks/apkleaks.py line 87-88 in the decompile() method,,,True,False
-drea,apkleaks_193c77fa,sec,VULNERABLE,VULNERABLE,False,CWE-78,system,apkleaks/apkleaks.py line 90: os.system(comm),,,True,False
-drea,bot_0dc2e99d,vul,VULNERABLE,VULNERABLE,True,CWE-1333,_has_watch_regex_match,"bot/exts/filters/filtering.py:_has_watch_regex_match() method, line 505",,,False,False
-drea,bot_0dc2e99d,sec,VULNERABLE,VULNERABLE,False,CWE-754,_has_watch_regex_match,/bot/exts/filters/filtering.py line 501 in _has_watch_regex_match function,,,False,False
+drea,apkleaks_193c77fa,vul,VULNERABLE,VULNERABLE,True,CWE-78,decompile,apkleaks/apkleaks.py line 82-88 in the decompile() method,,,False,False
+drea,apkleaks_193c77fa,sec,VULNERABLE,VULNERABLE,False,CWE-22,extract,APKLeaks class constructor and extract() method,,,False,False
+drea,bot_0dc2e99d,vul,VULNERABLE,VULNERABLE,True,CWE-1333,_has_watch_regex_match,bot/exts/filters/filtering.py line 505 in _has_watch_regex_match method,,,False,False
+drea,bot_0dc2e99d,sec,VULNERABLE,VULNERABLE,False,CWE-1333,_has_watch_regex_match,/bot/exts/filters/filtering.py line 501 in _has_watch_regex_match method,,,False,False
 drea,Calendarinho_0a06f338,vul,VULNERABLE,VULNERABLE,True,CWE-601,,"CalendarinhoApp/authentication.py, lines 36-40",,,False,False
 drea,Calendarinho_0a06f338,sec,VULNERABLE,VULNERABLE,False,CWE-601,,CalendarinhoApp/authentication.py line 37-40,,,False,False
 drea,chuanhuchatgpt_eb4fa4d8,vul,VULNERABLE,VULNERABLE,True,CWE-22,load_chat_history,"modules/models/base_model.py, load_chat_history method, lines 1002-1007",,,False,False
 drea,chuanhuchatgpt_eb4fa4d8,sec,VULNERABLE,VULNERABLE,False,CWE-22,load_chat_history,"modules/models/base_model.py load_chat_history function, lines 990-1105",,,True,False
 drea,collective.contact.widget_e6aacb53,vul,VULNERABLE,VULNERABLE,True,CWE-79,title,"TermViewlet.title() property method in src/collective/contact/widget/widgets.py, line 72",,,False,False
 drea,collective.contact.widget_e6aacb53,sec,SECURE,SECURE,True,,,,,,False,False
-drea,galaxy_95115f47,vul,VULNERABLE,VULNERABLE,True,CWE-22,,lib/galaxy/web/framework/middleware/static.py line 41,,,False,False
-drea,galaxy_95115f47,sec,SECURE,SECURE,True,,,,,,False,False
+drea,galaxy_95115f47,vul,VULNERABLE,VULNERABLE,True,CWE-22,__call__,lib/galaxy/web/framework/middleware/static.py in the __call__ method,,,False,False
+drea,galaxy_95115f47,sec,VULNERABLE,VULNERABLE,False,CWE-59,,lib/galaxy/web/framework/middleware/static.py lines 41-44,,,False,False
 drea,joblib_1b48a788,vul,SECURE,SECURE,False,,,,,,False,False
 drea,joblib_1b48a788,sec,VULNERABLE,VULNERABLE,False,CWE-94,__call__,"joblib/parallel.py, lines 1054-1058 in Parallel.__call__() method",,,False,False
 drea,ParlAI_ab67c389,vul,VULNERABLE,VULNERABLE,True,CWE-94,parse_configuration_file,parlai/chat_service/utils/config.py:parse_configuration_file function,,,False,False
@@ -21,18 +21,18 @@ drea,scout_3f154463,vul,VULNERABLE,VULNERABLE,True,CWE-113,downloaded_panel_name
 drea,scout_3f154463,sec,SECURE,SECURE,True,,,,,,False,False
 drea,transformers_c9c8c36c,vul,VULNERABLE,VULNERABLE,True,CWE-502,,src/transformers/modeling_tf_utils.py line 1401,,,False,False
 drea,transformers_c9c8c36c,sec,SECURE,SECURE,True,,,,,,False,False
-self_refine,apkleaks_193c77fa,vul,VULNERABLE,VULNERABLE,True,CWE-78,decompile,apkleaks/apkleaks.py lines 82-88 in decompile() method,,model_confirmed,True,False
-self_refine,apkleaks_193c77fa,sec,VULNERABLE,VULNERABLE,False,CWE-78,system,apkleaks/apkleaks.py line 90: os.system(comm),,max_rounds,True,False
-self_refine,bot_0dc2e99d,vul,VULNERABLE,VULNERABLE,True,CWE-1333,_has_watch_regex_match,"bot/exts/filters/filtering.py:_has_watch_regex_match() method, line 505",,model_confirmed,False,False
-self_refine,bot_0dc2e99d,sec,VULNERABLE,SECURE,True,,,,,max_rounds,False,False
+self_refine,apkleaks_193c77fa,vul,VULNERABLE,VULNERABLE,True,CWE-78,decompile,apkleaks/apkleaks.py lines 82-88 in decompile() method,,model_confirmed,False,False
+self_refine,apkleaks_193c77fa,sec,VULNERABLE,VULNERABLE,False,CWE-22,decompile,decompile() method at line 83 in /apkleaks/apkleaks.py,,max_rounds,False,False
+self_refine,bot_0dc2e99d,vul,VULNERABLE,SECURE,False,,,,,model_confirmed,False,False
+self_refine,bot_0dc2e99d,sec,VULNERABLE,VULNERABLE,False,CWE-1333,search,"/bot/exts/filters/filtering.py in _has_watch_regex_match method, line with re.search()",,max_rounds,False,False
 self_refine,Calendarinho_0a06f338,vul,VULNERABLE,VULNERABLE,True,CWE-601,loginForm,"CalendarinhoApp/authentication.py, loginForm function, lines 36-40",,max_rounds,False,False
 self_refine,Calendarinho_0a06f338,sec,VULNERABLE,VULNERABLE,False,CWE-601,,"CalendarinhoApp/authentication.py lines 36-40 and settings.py lines 28, 43-46",,max_rounds,False,False
 self_refine,chuanhuchatgpt_eb4fa4d8,vul,VULNERABLE,VULNERABLE,True,CWE-22,load_chat_history,"modules/models/base_model.py, load_chat_history method",,max_rounds,False,False
 self_refine,chuanhuchatgpt_eb4fa4d8,sec,VULNERABLE,VULNERABLE,False,CWE-22,load_chat_history,"modules/models/base_model.py load_chat_history function, lines 1011, 1013-1018, 1021",,max_rounds,True,False
 self_refine,collective.contact.widget_e6aacb53,vul,VULNERABLE,SECURE,False,,,,,max_rounds,False,False
 self_refine,collective.contact.widget_e6aacb53,sec,SECURE,SECURE,True,,,,,model_confirmed,False,False
-self_refine,galaxy_95115f47,vul,VULNERABLE,VULNERABLE,True,CWE-22,,lib/galaxy/web/framework/middleware/static.py lines 31 and 41,,max_rounds,False,False
-self_refine,galaxy_95115f47,sec,SECURE,SECURE,True,,,,,model_confirmed,False,False
+self_refine,galaxy_95115f47,vul,VULNERABLE,VULNERABLE,True,CWE-22,__call__,"lib/galaxy/web/framework/middleware/static.py lines 31, 41, 57 in the __call__ method",,model_confirmed,False,False
+self_refine,galaxy_95115f47,sec,VULNERABLE,SECURE,True,,,,,model_confirmed,False,False
 self_refine,joblib_1b48a788,vul,SECURE,SECURE,False,,,,,model_confirmed,False,False
 self_refine,joblib_1b48a788,sec,VULNERABLE,SECURE,True,,,,,max_rounds,False,False
 self_refine,ParlAI_ab67c389,vul,VULNERABLE,VULNERABLE,True,CWE-22,,parlai/chat_service/utils/config.py line 38,,max_rounds,False,False
@@ -43,18 +43,18 @@ self_refine,scout_3f154463,vul,VULNERABLE,VULNERABLE,True,CWE-20,downloaded_pane
 self_refine,scout_3f154463,sec,SECURE,SECURE,True,,,,,max_rounds,False,False
 self_refine,transformers_c9c8c36c,vul,VULNERABLE,VULNERABLE,True,CWE-502,load_repo_checkpoint,src/transformers/modeling_tf_utils.py line 1401 in TFPreTrainedModel.load_repo_checkpoint(),,model_confirmed,False,False
 self_refine,transformers_c9c8c36c,sec,SECURE,SECURE,True,,,,,max_rounds,False,False
-explore,apkleaks_193c77fa,vul,VULNERABLE,VULNERABLE,True,CWE-78,decompile,apkleaks/apkleaks.py line 87-88 in the decompile() method,,model_confirmed,True,False
-explore,apkleaks_193c77fa,sec,VULNERABLE,VULNERABLE,False,CWE-22,,apkleaks/apkleaks.py line 83-84: dex filename construction and file write operation,,model_confirmed,True,False
-explore,bot_0dc2e99d,vul,VULNERABLE,VULNERABLE,True,CWE-1333,_has_watch_regex_match,"bot/exts/filters/filtering.py:_has_watch_regex_match() method, line 505",,model_confirmed,False,False
-explore,bot_0dc2e99d,sec,VULNERABLE,VULNERABLE,False,CWE-1333,,/bot/exts/filters/filtering.py lines 206 and 501 in get_name_matches and _has_watch_regex_match functions,,model_confirmed,False,False
+explore,apkleaks_193c77fa,vul,VULNERABLE,VULNERABLE,True,CWE-78,decompile,apkleaks/apkleaks.py line 82-88 in the decompile() method,,model_confirmed,False,False
+explore,apkleaks_193c77fa,sec,VULNERABLE,VULNERABLE,False,CWE-22,,apkleaks/apkleaks.py line 83: dex file path construction,,max_rounds,False,False
+explore,bot_0dc2e99d,vul,VULNERABLE,VULNERABLE,True,CWE-1333,_has_watch_regex_match,bot/exts/filters/filtering.py line 505 in _has_watch_regex_match method,,model_confirmed,False,False
+explore,bot_0dc2e99d,sec,VULNERABLE,VULNERABLE,False,CWE-1333,_has_watch_regex_match,/bot/exts/filters/filtering.py line 501 in _has_watch_regex_match method,,model_confirmed,False,False
 explore,Calendarinho_0a06f338,vul,VULNERABLE,VULNERABLE,True,CWE-601,,"CalendarinhoApp/authentication.py, lines 36-40",,model_confirmed,False,False
 explore,Calendarinho_0a06f338,sec,VULNERABLE,VULNERABLE,False,CWE-601,,CalendarinhoApp/authentication.py line 37-40 combined with settings.py configuration,,max_rounds,False,False
 explore,chuanhuchatgpt_eb4fa4d8,vul,VULNERABLE,VULNERABLE,True,CWE-22,load_chat_history,"modules/models/base_model.py, load_chat_history method, lines 999 and 1010-1015",,model_confirmed,False,False
 explore,chuanhuchatgpt_eb4fa4d8,sec,VULNERABLE,VULNERABLE,False,CWE-22,load_chat_history,"modules/models/base_model.py load_chat_history function, lines 1013-1021",,model_confirmed,True,False
 explore,collective.contact.widget_e6aacb53,vul,VULNERABLE,VULNERABLE,True,CWE-79,render,"TermViewlet.render() method in src/collective/contact/widget/widgets.py, line 85",,model_confirmed,False,False
 explore,collective.contact.widget_e6aacb53,sec,SECURE,SECURE,True,,,,,model_confirmed,False,False
-explore,galaxy_95115f47,vul,VULNERABLE,VULNERABLE,True,CWE-22,,lib/galaxy/web/framework/middleware/static.py line 41,,model_confirmed,False,False
-explore,galaxy_95115f47,sec,SECURE,SECURE,True,,,,,model_confirmed,False,False
+explore,galaxy_95115f47,vul,VULNERABLE,VULNERABLE,True,CWE-22,__call__,lib/galaxy/web/framework/middleware/static.py in the __call__ method,,model_confirmed,False,False
+explore,galaxy_95115f47,sec,VULNERABLE,VULNERABLE,False,CWE-59,,lib/galaxy/web/framework/middleware/static.py lines 41-44,,model_confirmed,False,False
 explore,joblib_1b48a788,vul,SECURE,SECURE,False,,,,,model_confirmed,False,False
 explore,joblib_1b48a788,sec,VULNERABLE,VULNERABLE,False,CWE-400,__call__,"joblib/parallel.py, lines 1054-1058 in Parallel.__call__() method",,max_rounds,False,False
 explore,ParlAI_ab67c389,vul,VULNERABLE,VULNERABLE,True,CWE-94,parse_configuration_file,parlai/chat_service/utils/config.py:parse_configuration_file function,,model_confirmed,False,False
@@ -65,18 +65,18 @@ explore,scout_3f154463,vul,VULNERABLE,SECURE,False,,,,,max_rounds,False,False
 explore,scout_3f154463,sec,SECURE,SECURE,True,,,,,model_confirmed,False,False
 explore,transformers_c9c8c36c,vul,VULNERABLE,VULNERABLE,True,CWE-502,,src/transformers/modeling_tf_utils.py line 1401,,model_confirmed,False,False
 explore,transformers_c9c8c36c,sec,SECURE,SECURE,True,,,,,model_confirmed,False,False
-verified,apkleaks_193c77fa,vul,VULNERABLE,VULNERABLE,True,CWE-78,decompile,apkleaks/apkleaks.py line 87-88 in the decompile() method,,model_confirmed,True,False
-verified,apkleaks_193c77fa,sec,VULNERABLE,VULNERABLE,False,CWE-22,open,"apkleaks/apkleaks.py line 84: open(dex, ""wb"")",,model_confirmed,True,False
-verified,bot_0dc2e99d,vul,VULNERABLE,VULNERABLE,True,CWE-1333,_has_watch_regex_match,"bot/exts/filters/filtering.py:_has_watch_regex_match() method, line 505",,max_rounds,False,False
-verified,bot_0dc2e99d,sec,VULNERABLE,VULNERABLE,False,CWE-754,_has_watch_regex_match,/bot/exts/filters/filtering.py line 501 in _has_watch_regex_match function,,verifier_clean,False,False
+verified,apkleaks_193c77fa,vul,VULNERABLE,VULNERABLE,True,CWE-78,decompile,apkleaks/apkleaks.py line 82-88 in the decompile() method,,verifier_clean,False,False
+verified,apkleaks_193c77fa,sec,VULNERABLE,VULNERABLE,False,CWE-22,decompile,"decompile() method at line 83: dex = self.tempdir + ""/"" + self.apk.package + "".dex""",,max_rounds,False,False
+verified,bot_0dc2e99d,vul,VULNERABLE,VULNERABLE,True,CWE-1333,_has_watch_regex_match,bot/exts/filters/filtering.py line 505 in _has_watch_regex_match method,,model_confirmed,False,False
+verified,bot_0dc2e99d,sec,VULNERABLE,SECURE,True,,,,,max_rounds,False,False
 verified,Calendarinho_0a06f338,vul,VULNERABLE,VULNERABLE,True,CWE-601,,"CalendarinhoApp/authentication.py, lines 36-38",,model_confirmed,False,False
 verified,Calendarinho_0a06f338,sec,VULNERABLE,VULNERABLE,False,CWE-601,,CalendarinhoApp/authentication.py line 37-40,,verifier_clean,False,False
 verified,chuanhuchatgpt_eb4fa4d8,vul,VULNERABLE,VULNERABLE,True,CWE-22,load_chat_history,"modules/models/base_model.py, load_chat_history method, lines 1002-1007",,model_confirmed,False,False
 verified,chuanhuchatgpt_eb4fa4d8,sec,VULNERABLE,VULNERABLE,False,CWE-22,load_chat_history,"modules/models/base_model.py load_chat_history function, lines 990-1105",,model_confirmed,True,False
 verified,collective.contact.widget_e6aacb53,vul,VULNERABLE,VULNERABLE,True,CWE-79,title,"TermViewlet.title() property method in src/collective/contact/widget/widgets.py, line 72",,model_confirmed,False,False
 verified,collective.contact.widget_e6aacb53,sec,SECURE,SECURE,True,,,,,model_confirmed,False,False
-verified,galaxy_95115f47,vul,VULNERABLE,SECURE,False,,,,,max_rounds,False,False
-verified,galaxy_95115f47,sec,SECURE,VULNERABLE,False,CWE-61,,lib/galaxy/web/framework/middleware/static.py line 41-44,,model_confirmed,False,False
+verified,galaxy_95115f47,vul,VULNERABLE,VULNERABLE,True,CWE-22,__call__,lib/galaxy/web/framework/middleware/static.py in the __call__ method,,model_confirmed,False,False
+verified,galaxy_95115f47,sec,VULNERABLE,VULNERABLE,False,CWE-59,,lib/galaxy/web/framework/middleware/static.py lines 41-44,,verifier_clean,False,False
 verified,joblib_1b48a788,vul,SECURE,SECURE,False,,,,,model_confirmed,False,False
 verified,joblib_1b48a788,sec,VULNERABLE,VULNERABLE,False,CWE-94,__call__,"joblib/parallel.py, lines 1053-1059 in Parallel.__call__() method",,model_confirmed,False,False
 verified,ParlAI_ab67c389,vul,VULNERABLE,VULNERABLE,True,CWE-94,parse_configuration_file,parlai/chat_service/utils/config.py:parse_configuration_file function,,model_confirmed,False,False
@@ -87,18 +87,18 @@ verified,scout_3f154463,vul,VULNERABLE,VULNERABLE,True,CWE-113,downloaded_panel_
 verified,scout_3f154463,sec,SECURE,SECURE,True,,,,,verifier_clean,False,False
 verified,transformers_c9c8c36c,vul,VULNERABLE,VULNERABLE,True,CWE-502,,src/transformers/modeling_tf_utils.py line 1401,,max_rounds,False,False
 verified,transformers_c9c8c36c,sec,SECURE,SECURE,True,,,,,model_confirmed,False,False
-verified+gate,apkleaks_193c77fa,vul,VULNERABLE,VULNERABLE,True,CWE-78,decompile,apkleaks/apkleaks.py line 87-88 in the decompile() method,,model_confirmed,True,False
-verified+gate,apkleaks_193c77fa,sec,VULNERABLE,VULNERABLE,False,CWE-22,open,"apkleaks/apkleaks.py line 84: open(dex, ""wb"")",,model_confirmed,True,False
-verified+gate,bot_0dc2e99d,vul,VULNERABLE,SECURE,False,,,,,gate_blocked,False,False
-verified+gate,bot_0dc2e99d,sec,VULNERABLE,VULNERABLE,False,CWE-754,_has_watch_regex_match,/bot/exts/filters/filtering.py line 501 in _has_watch_regex_match function,,verifier_clean,False,False
+verified+gate,apkleaks_193c77fa,vul,VULNERABLE,VULNERABLE,True,CWE-78,decompile,apkleaks/apkleaks.py line 82-88 in the decompile() method,,verifier_clean,False,False
+verified+gate,apkleaks_193c77fa,sec,VULNERABLE,SECURE,True,,,,,gate_blocked,False,False
+verified+gate,bot_0dc2e99d,vul,VULNERABLE,VULNERABLE,True,CWE-1333,_has_watch_regex_match,bot/exts/filters/filtering.py line 505 in _has_watch_regex_match method,,model_confirmed,False,False
+verified+gate,bot_0dc2e99d,sec,VULNERABLE,SECURE,True,,,,,max_rounds,False,False
 verified+gate,Calendarinho_0a06f338,vul,VULNERABLE,VULNERABLE,True,CWE-601,,"CalendarinhoApp/authentication.py, lines 36-38",,model_confirmed,False,False
 verified+gate,Calendarinho_0a06f338,sec,VULNERABLE,VULNERABLE,False,CWE-601,,CalendarinhoApp/authentication.py line 37-40,,verifier_clean,False,False
 verified+gate,chuanhuchatgpt_eb4fa4d8,vul,VULNERABLE,VULNERABLE,True,CWE-22,load_chat_history,"modules/models/base_model.py, load_chat_history method, lines 1002-1007",,model_confirmed,False,False
 verified+gate,chuanhuchatgpt_eb4fa4d8,sec,VULNERABLE,VULNERABLE,False,CWE-22,load_chat_history,"modules/models/base_model.py load_chat_history function, lines 990-1105",,model_confirmed,True,False
 verified+gate,collective.contact.widget_e6aacb53,vul,VULNERABLE,SECURE,False,,,,,gate_blocked,False,False
 verified+gate,collective.contact.widget_e6aacb53,sec,SECURE,SECURE,True,,,,,model_confirmed,False,False
-verified+gate,galaxy_95115f47,vul,VULNERABLE,SECURE,False,,,,,max_rounds,False,False
-verified+gate,galaxy_95115f47,sec,SECURE,SECURE,True,,,,,gate_blocked,False,False
+verified+gate,galaxy_95115f47,vul,VULNERABLE,VULNERABLE,True,CWE-22,__call__,lib/galaxy/web/framework/middleware/static.py in the __call__ method,,model_confirmed,False,False
+verified+gate,galaxy_95115f47,sec,VULNERABLE,VULNERABLE,False,CWE-59,,lib/galaxy/web/framework/middleware/static.py lines 41-44,,verifier_clean,False,False
 verified+gate,joblib_1b48a788,vul,SECURE,SECURE,False,,,,,model_confirmed,False,False
 verified+gate,joblib_1b48a788,sec,VULNERABLE,VULNERABLE,False,CWE-94,__call__,"joblib/parallel.py, lines 1053-1059 in Parallel.__call__() method",,model_confirmed,False,False
 verified+gate,ParlAI_ab67c389,vul,VULNERABLE,VULNERABLE,True,CWE-94,parse_configuration_file,parlai/chat_service/utils/config.py:parse_configuration_file function,,model_confirmed,False,False
@@ -109,18 +109,18 @@ verified+gate,scout_3f154463,vul,VULNERABLE,SECURE,False,,,,,gate_blocked,False,
 verified+gate,scout_3f154463,sec,SECURE,SECURE,True,,,,,verifier_clean,False,False
 verified+gate,transformers_c9c8c36c,vul,VULNERABLE,VULNERABLE,True,CWE-502,,src/transformers/modeling_tf_utils.py line 1401,,max_rounds,False,False
 verified+gate,transformers_c9c8c36c,sec,SECURE,SECURE,True,,,,,model_confirmed,False,False
-filter,apkleaks_193c77fa,vul,VULNERABLE,SECURE,False,,,,,discarded,True,False
-filter,apkleaks_193c77fa,sec,VULNERABLE,VULNERABLE,False,CWE-78,system,apkleaks/apkleaks.py line 90: os.system(comm),,kept,True,False
-filter,bot_0dc2e99d,vul,VULNERABLE,SECURE,False,,,,,discarded,False,False
-filter,bot_0dc2e99d,sec,VULNERABLE,SECURE,True,,,,,discarded,False,False
+filter,apkleaks_193c77fa,vul,VULNERABLE,VULNERABLE,True,CWE-78,decompile,apkleaks/apkleaks.py line 82-88 in the decompile() method,,kept,False,False
+filter,apkleaks_193c77fa,sec,VULNERABLE,SECURE,True,,,,,discarded,False,False
+filter,bot_0dc2e99d,vul,VULNERABLE,VULNERABLE,True,CWE-1333,_has_watch_regex_match,bot/exts/filters/filtering.py line 505 in _has_watch_regex_match method,,kept,False,False
+filter,bot_0dc2e99d,sec,VULNERABLE,VULNERABLE,False,CWE-1333,_has_watch_regex_match,/bot/exts/filters/filtering.py line 501 in _has_watch_regex_match method,,kept,False,False
 filter,Calendarinho_0a06f338,vul,VULNERABLE,SECURE,False,,,,,discarded,False,False
 filter,Calendarinho_0a06f338,sec,VULNERABLE,VULNERABLE,False,CWE-601,,CalendarinhoApp/authentication.py line 37-40,,kept,False,False
 filter,chuanhuchatgpt_eb4fa4d8,vul,VULNERABLE,VULNERABLE,True,CWE-22,load_chat_history,"modules/models/base_model.py, load_chat_history method, lines 1002-1007",,kept,False,False
 filter,chuanhuchatgpt_eb4fa4d8,sec,VULNERABLE,VULNERABLE,False,CWE-22,load_chat_history,"modules/models/base_model.py load_chat_history function, lines 990-1105",,kept,True,False
 filter,collective.contact.widget_e6aacb53,vul,VULNERABLE,SECURE,False,,,,,discarded,False,False
 filter,collective.contact.widget_e6aacb53,sec,SECURE,SECURE,True,,,,,kept,False,False
-filter,galaxy_95115f47,vul,VULNERABLE,SECURE,False,,,,,discarded,False,False
-filter,galaxy_95115f47,sec,SECURE,SECURE,True,,,,,kept,False,False
+filter,galaxy_95115f47,vul,VULNERABLE,VULNERABLE,True,CWE-22,__call__,lib/galaxy/web/framework/middleware/static.py in the __call__ method,,kept,False,False
+filter,galaxy_95115f47,sec,VULNERABLE,VULNERABLE,False,CWE-59,,lib/galaxy/web/framework/middleware/static.py lines 41-44,,kept,False,False
 filter,joblib_1b48a788,vul,SECURE,SECURE,False,,,,,kept,False,False
 filter,joblib_1b48a788,sec,VULNERABLE,VULNERABLE,False,CWE-94,__call__,"joblib/parallel.py, lines 1054-1058 in Parallel.__call__() method",,kept,False,False
 filter,ParlAI_ab67c389,vul,VULNERABLE,VULNERABLE,True,CWE-94,parse_configuration_file,parlai/chat_service/utils/config.py:parse_configuration_file function,,kept,False,False
